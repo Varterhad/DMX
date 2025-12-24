@@ -12,7 +12,6 @@
     <meta name="apple-mobile-web-app-title" content="DMX Calc">
     
     <style>
-        /* ВАШ ОРИГИНАЛЬНЫЙ CSS КОД */
         * {
             margin: 0;
             padding: 0;
@@ -41,7 +40,6 @@
             font-family: inherit;
         }
         
-        /* ОСНОВНОЙ КОНТЕЙНЕР */
         .app-container {
             max-width: 800px;
             margin: 0 auto;
@@ -49,7 +47,6 @@
             min-height: 100vh;
         }
         
-        /* ЗАГОЛОВОК ОБОРУДОВАНИЯ */
         .equipment-header {
             background-color: #333333;
             height: 52px;
@@ -74,7 +71,6 @@
             padding: 0;
         }
         
-        /* ЗАКРЕПЛЕННОЕ ОБОРУДОВАНИЕ */
         .pinned-container {
             background-color: #222222;
             padding: 8px 16px;
@@ -110,7 +106,6 @@
             cursor: pointer;
         }
         
-        /* СЕКЦИЯ АДРЕСА */
         .address-section {
             padding: 16px 8px 0 8px;
         }
@@ -135,6 +130,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .round-btn:active {
+            background-color: #4CAF50;
+            transform: scale(0.95);
         }
         
         .address-display {
@@ -187,7 +189,6 @@
             height: 28px;
         }
         
-        /* СЕКЦИЯ ВВОДА */
         .input-section {
             margin: 16px 0;
             padding: 0 16px;
@@ -239,7 +240,6 @@
             margin: 16px 16px;
         }
         
-        /* КНОПКИ ПИНОВ */
         .pins-section {
             margin: 0 8px 16px 8px;
         }
@@ -260,13 +260,18 @@
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.2s;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        .pin-btn:active {
+            transform: scale(0.95);
         }
         
         .pin-btn.selected {
             background-color: #4CAF50;
         }
         
-        /* РЕЗУЛЬТАТ */
         .result-text {
             text-align: center;
             color: #4CAF50;
@@ -292,7 +297,10 @@
             cursor: pointer;
         }
         
-        /* ПАНЕЛЬ ОБОРУДОВАНИЯ */
+        .reset-btn:active {
+            transform: scale(0.95);
+        }
+        
         .equipment-panel {
             position: fixed;
             top: 0;
@@ -355,6 +363,10 @@
             cursor: pointer;
         }
         
+        .add-equipment-btn:active {
+            transform: scale(0.98);
+        }
+        
         .equipment-list-container {
             padding: 0 16px 16px 16px;
         }
@@ -393,7 +405,6 @@
             color: #FFD700;
         }
         
-        /* ДИАЛОГОВОЕ ОКНО */
         .dialog-overlay {
             position: fixed;
             top: 0;
@@ -475,7 +486,6 @@
             color: white;
         }
         
-        /* АДАПТИВНОСТЬ ДЛЯ IPHONE */
         @media (max-width: 768px) {
             .pins-grid {
                 grid-template-columns: repeat(3, 1fr);
@@ -508,7 +518,6 @@
             }
         }
         
-        /* ЗАГРУЗЧИК */
         .loader {
             display: none;
             position: fixed;
@@ -524,7 +533,6 @@
             font-size: 18px;
         }
         
-        /* СКРОЛЛБАР */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -544,7 +552,6 @@
     </style>
 </head>
 <body>
-    <!-- ИНСТРУКЦИЯ ДЛЯ ПОЛЬЗОВАТЕЛЯ (скрыта в приложении) -->
     <div id="instructions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; color: white; padding: 20px; z-index: 9999; overflow-y: auto;">
         <h2>📱 Установка приложения:</h2>
         <p>Для установки на iPhone:</p>
@@ -555,24 +562,20 @@
         <button onclick="hideInstructions()" style="margin-top: 20px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px;">Понятно</button>
     </div>
 
-    <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
     <div class="app-container">
-        <!-- Панель оборудования -->
         <div class="equipment-header">
             <button class="equipment-toggle" onclick="toggleEquipmentList()">
                 ОБОРУДОВАНИЕ ▼
             </button>
         </div>
 
-        <!-- Закрепленное оборудование -->
         <div id="pinned-container" class="pinned-container"></div>
 
-        <!-- Отображение адреса -->
         <div class="address-section">
             <div class="address-controls">
-                <button class="round-btn minus-btn" onclick="decreaseAddress()">-</button>
+                <button id="minus-btn" class="round-btn minus-btn">-</button>
                 <div id="address-display" class="address-display">1</div>
-                <button class="round-btn plus-btn" onclick="increaseAddress()">+</button>
+                <button id="plus-btn" class="round-btn plus-btn">+</button>
             </div>
 
             <div class="surrounding-addresses">
@@ -586,34 +589,29 @@
             </div>
         </div>
 
-        <!-- Ввод шага и адреса -->
         <div class="input-section">
             <div class="input-row">
                 <span class="input-label">ШАГ:</span>
-                <input type="number" id="step-input" class="number-input" value="1" min="1" max="512" onchange="updateStepValue()">
+                <input type="number" id="step-input" class="number-input" value="1" min="1" max="512">
             </div>
             <div class="input-row">
                 <span class="input-label">АДРЕС:</span>
-                <input type="number" id="address-input" class="number-input" value="1" min="1" max="512" onchange="setPinsFromAddress()">
+                <input type="number" id="address-input" class="number-input" value="1" min="1" max="512">
             </div>
         </div>
 
         <div class="divider"></div>
 
-        <!-- Кнопки пинов -->
         <div class="pins-section">
             <div class="pins-grid" id="pins-container"></div>
         </div>
 
-        <!-- Результат -->
         <div id="result-text" class="result-text">
             Адрес: 1<br>Пины: нет
         </div>
 
-        <!-- Кнопка сброса -->
         <button class="reset-btn" onclick="resetAll()">СБРОСИТЬ ВСЕ</button>
 
-        <!-- Панель оборудования (скрытая) -->
         <div id="equipment-panel" class="equipment-panel">
             <div class="equipment-panel-header">
                 <button class="close-btn" onclick="toggleEquipmentList()">
@@ -622,19 +620,16 @@
             </div>
 
             <input type="text" id="equipment-search" class="search-input" 
-                   placeholder="Поиск оборудования..." oninput="filterEquipment(this.value)">
+                   placeholder="Поиск оборудования...">
 
             <button class="add-equipment-btn" onclick="showAddEquipmentDialog()">
                 + ДОБАВИТЬ ПРИБОР
             </button>
 
-            <div class="equipment-list-container" id="equipment-list-container">
-                <!-- Список оборудования будет здесь -->
-            </div>
+            <div class="equipment-list-container" id="equipment-list-container"></div>
         </div>
     </div>
 
-    <!-- Диалог добавления/редактирования оборудования -->
     <div id="equipment-dialog" class="dialog-overlay">
         <div class="dialog">
             <h3 id="dialog-title">Добавить прибор</h3>
@@ -651,17 +646,9 @@
         </div>
     </div>
 
-    <!-- Загрузчик -->
     <div id="loader" class="loader">Загрузка...</div>
 
     <script>
-        // ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ ДЛЯ ПРИЛОЖЕНИЯ
-        let dmxApp = null;
-
-        // ============================================
-        // КЛАСС DMX КАЛЬКУЛЯТОРА
-        // ============================================
-        
         class EquipmentItem {
             constructor(name, power, channels, pinned = false, isCustom = false) {
                 this.name = name;
@@ -692,37 +679,18 @@
                 }
                 return null;
             }
-
-            getFirstChannel() {
-                if (!this.channels || this.channels === '0' || 
-                    this.channels === 'DIM' || this.channels === 'Пульт ДУ') {
-                    return 0;
-                }
-                try {
-                    const firstChannel = this.channels.split('/')[0];
-                    return parseInt(firstChannel.trim());
-                } catch (e) {
-                    return 0;
-                }
-            }
         }
 
         class DmxCalculator {
             constructor() {
-                // DMX константы
                 this.DMX_TOTAL_CHANNELS = 512;
-                
-                // Текущие значения
                 this.currentStep = 1;
                 this.currentAddress = 1;
                 this.pinSelected = Array(9).fill(false);
-                
-                // Оборудование
                 this.allEquipment = [];
                 this.pinnedEquipment = [];
                 this.editingEquipment = null;
                 
-                // Инициализация
                 this.initializeEquipment();
                 this.loadFromStorage();
                 this.initializeUI();
@@ -875,11 +843,28 @@
                     button.className = 'pin-btn';
                     button.textContent = (i + 1).toString();
                     button.dataset.index = i;
-                    button.addEventListener('click', () => this.togglePin(i));
                     pinsContainer.appendChild(button);
                 }
 
-                // Отображение начальных адресов
+                // Обработчики событий для пинов
+                document.querySelectorAll('.pin-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const index = parseInt(btn.dataset.index);
+                        this.togglePin(index);
+                    });
+                });
+
+                // Обработчики для кнопок + и -
+                document.getElementById('plus-btn').addEventListener('click', () => this.increaseAddress());
+                document.getElementById('minus-btn').addEventListener('click', () => this.decreaseAddress());
+
+                // Обработчики для полей ввода
+                document.getElementById('step-input').addEventListener('input', () => this.updateStepValue());
+                document.getElementById('address-input').addEventListener('input', () => this.setPinsFromAddress());
+
+                // Обработчик для поиска
+                document.getElementById('equipment-search').addEventListener('input', (e) => this.filterEquipment(e.target.value));
+
                 this.updateSurroundingAddresses();
                 this.updateEquipmentList();
                 this.updatePinnedList();
@@ -1015,7 +1000,7 @@
                     const span = document.createElement('span');
                     span.textContent = nextAddress;
                     nextContainer.appendChild(span);
-            }
+                }
             }
 
             resetAll() {
@@ -1041,14 +1026,14 @@
                 const panel = document.getElementById('equipment-panel');
                 const toggleBtn = document.querySelector('.equipment-toggle');
                 
-                if (panel.style.display === 'none') {
-                    panel.style.display = 'block';
-                    toggleBtn.textContent = 'ОБОРУДОВАНИЕ ▲';
-                    this.updateEquipmentList();
-                } else {
+                if (panel.style.display === 'block') {
                     panel.style.display = 'none';
                     toggleBtn.textContent = 'ОБОРУДОВАНИЕ ▼';
                     document.getElementById('equipment-search').value = '';
+                } else {
+                    panel.style.display = 'block';
+                    toggleBtn.textContent = 'ОБОРУДОВАНИЕ ▲';
+                    this.updateEquipmentList();
                 }
             }
 
@@ -1132,7 +1117,6 @@
                 document.getElementById('dialog-channels').value = '';
                 document.getElementById('equipment-dialog').style.display = 'flex';
                 
-                // Фокус на первое поле
                 setTimeout(() => {
                     document.getElementById('dialog-name').focus();
                 }, 100);
@@ -1147,7 +1131,6 @@
                 document.getElementById('dialog-channels').value = item.channels;
                 document.getElementById('equipment-dialog').style.display = 'flex';
                 
-                // Фокус на первое поле
                 setTimeout(() => {
                     document.getElementById('dialog-name').focus();
                 }, 100);
@@ -1185,10 +1168,6 @@
                 this.updateEquipmentList();
                 this.updatePinnedList();
                 this.closeEquipmentDialog();
-                
-                // Переоткрытие списка для обновления
-                this.toggleEquipmentList();
-                this.toggleEquipmentList();
             }
 
             deleteEquipment() {
@@ -1311,10 +1290,10 @@
             }
         }
 
-        // ============================================
-        // ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ HTML
-        // ============================================
+        // Глобальная переменная
+        let dmxApp = null;
 
+        // Глобальные функции
         function increaseAddress() {
             if (dmxApp) dmxApp.increaseAddress();
         }
@@ -1363,28 +1342,22 @@
             document.getElementById('instructions').style.display = 'none';
         }
 
-        // ============================================
-        // ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
-        // ============================================
-
+        // Инициализация приложения
         document.addEventListener('DOMContentLoaded', () => {
-            // Показать инструкцию при первом открытии
             if (!localStorage.getItem('dmx_first_visit')) {
                 document.getElementById('instructions').style.display = 'block';
                 localStorage.setItem('dmx_first_visit', 'true');
             }
             
-            // Инициализация калькулятора
             dmxApp = new DmxCalculator();
             
-            // Сохранять данные при закрытии страницы
             window.addEventListener('beforeunload', () => {
                 if (dmxApp) {
                     dmxApp.saveToStorage();
                 }
             });
             
-            // PWA: Регистрация Service Worker
+            // PWA
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/sw.js').catch(console.error);
             }
@@ -1392,7 +1365,7 @@
             console.log('DMX Calculator initialized');
         });
 
-        // Обработка клавиатуры для диалогов
+        // Обработка клавиатуры
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const dialog = document.getElementById('equipment-dialog');
