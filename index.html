@@ -655,6 +655,9 @@
     <div id="loader" class="loader">Загрузка...</div>
 
     <script>
+    // ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ ДЛЯ ПРИЛОЖЕНИЯ
+    let dmxApp = null;
+
     // ============================================
     // КЛАСС DMX КАЛЬКУЛЯТОРА
     // ============================================
@@ -718,14 +721,12 @@
             this.allEquipment = [];
             this.pinnedEquipment = [];
             this.editingEquipment = null;
-        }
-
-        initialize() {
+            
+            // Инициализация
             this.initializeEquipment();
             this.loadFromStorage();
             this.initializeUI();
             this.updateUI();
-            this.bindEvents();
         }
 
         initializeEquipment() {
@@ -874,6 +875,7 @@
                 button.className = 'pin-btn';
                 button.textContent = (i + 1).toString();
                 button.dataset.index = i;
+                button.addEventListener('click', () => this.togglePin(i));
                 pinsContainer.appendChild(button);
             }
 
@@ -881,42 +883,6 @@
             this.updateSurroundingAddresses();
             this.updateEquipmentList();
             this.updatePinnedList();
-        }
-
-        bindEvents() {
-            // Кнопки плюс/минус
-            document.querySelector('.minus-btn').addEventListener('click', () => this.decreaseAddress());
-            document.querySelector('.plus-btn').addEventListener('click', () => this.increaseAddress());
-            
-            // Кнопки пинов
-            const pinButtons = document.querySelectorAll('.pin-btn');
-            pinButtons.forEach((btn, i) => {
-                btn.addEventListener('click', () => this.togglePin(i));
-            });
-            
-            // Кнопка оборудования
-            document.querySelector('.equipment-toggle').addEventListener('click', () => this.toggleEquipmentList());
-            
-            // Кнопка сброса
-            document.querySelector('.reset-btn').addEventListener('click', () => this.resetAll());
-            
-            // Поле поиска
-            document.getElementById('equipment-search').addEventListener('input', (e) => this.filterEquipment(e.target.value));
-            
-            // Кнопка добавления оборудования
-            document.querySelector('.add-equipment-btn').addEventListener('click', () => this.showAddEquipmentDialog());
-            
-            // Кнопки диалога
-            document.querySelector('.cancel-btn').addEventListener('click', () => this.closeEquipmentDialog());
-            document.querySelector('.save-btn').addEventListener('click', () => this.saveEquipment());
-            document.getElementById('delete-btn').addEventListener('click', () => this.deleteEquipment());
-            
-            // Поля ввода
-            document.getElementById('step-input').addEventListener('change', () => this.updateStepValue());
-            document.getElementById('address-input').addEventListener('change', () => this.setPinsFromAddress());
-            
-            // Кнопка закрытия панели оборудования
-            document.querySelector('.close-btn').addEventListener('click', () => this.toggleEquipmentList());
         }
 
         normalizeAddress(address) {
@@ -1109,12 +1075,12 @@
                 const editBtn = document.createElement('button');
                 editBtn.className = 'edit-btn';
                 editBtn.textContent = '✎';
-                editBtn.addEventListener('click', () => this.showEditEquipmentDialog(item));
+                editBtn.onclick = () => this.showEditEquipmentDialog(item);
                 
                 const pinBtn = document.createElement('button');
                 pinBtn.className = `pin-star-btn ${item.pinned ? 'pinned' : ''}`;
                 pinBtn.textContent = item.pinned ? '★' : '☆';
-                pinBtn.addEventListener('click', () => this.togglePinEquipment(item));
+                pinBtn.onclick = () => this.togglePinEquipment(item);
                 
                 itemDiv.appendChild(textDiv);
                 itemDiv.appendChild(editBtn);
@@ -1145,7 +1111,7 @@
                 const unpinBtn = document.createElement('button');
                 unpinBtn.className = 'unpin-btn';
                 unpinBtn.textContent = '✕';
-                unpinBtn.addEventListener('click', () => this.togglePinEquipment(item));
+                unpinBtn.onclick = () => this.togglePinEquipment(item);
                 
                 itemDiv.appendChild(textDiv);
                 itemDiv.appendChild(unpinBtn);
@@ -1346,6 +1312,58 @@
     }
 
     // ============================================
+    // ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ HTML
+    // ============================================
+
+    function increaseAddress() {
+        if (dmxApp) dmxApp.increaseAddress();
+    }
+
+    function decreaseAddress() {
+        if (dmxApp) dmxApp.decreaseAddress();
+    }
+
+    function resetAll() {
+        if (dmxApp) dmxApp.resetAll();
+    }
+
+    function updateStepValue() {
+        if (dmxApp) dmxApp.updateStepValue();
+    }
+
+    function setPinsFromAddress() {
+        if (dmxApp) dmxApp.setPinsFromAddress();
+    }
+
+    function toggleEquipmentList() {
+        if (dmxApp) dmxApp.toggleEquipmentList();
+    }
+
+    function showAddEquipmentDialog() {
+        if (dmxApp) dmxApp.showAddEquipmentDialog();
+    }
+
+    function closeEquipmentDialog() {
+        if (dmxApp) dmxApp.closeEquipmentDialog();
+    }
+
+    function saveEquipment() {
+        if (dmxApp) dmxApp.saveEquipment();
+    }
+
+    function deleteEquipment() {
+        if (dmxApp) dmxApp.deleteEquipment();
+    }
+
+    function filterEquipment(value) {
+        if (dmxApp) dmxApp.filterEquipment(value);
+    }
+
+    function hideInstructions() {
+        document.getElementById('instructions').style.display = 'none';
+    }
+
+    // ============================================
     // ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
     // ============================================
 
@@ -1357,23 +1375,21 @@
         }
         
         // Инициализация калькулятора
-        const dmxCalculator = new DmxCalculator();
-        dmxCalculator.initialize();
+        dmxApp = new DmxCalculator();
         
         // Сохранять данные при закрытии страницы
         window.addEventListener('beforeunload', () => {
-            dmxCalculator.saveToStorage();
+            if (dmxApp) {
+                dmxApp.saveToStorage();
+            }
         });
-        
-        // Вспомогательная функция
-        window.hideInstructions = function() {
-            document.getElementById('instructions').style.display = 'none';
-        };
         
         // PWA: Регистрация Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(console.error);
         }
+        
+        console.log('DMX Calculator initialized');
     });
 
     // Обработка клавиатуры для диалогов
@@ -1381,7 +1397,21 @@
         if (e.key === 'Escape') {
             const dialog = document.getElementById('equipment-dialog');
             if (dialog.style.display === 'flex') {
-                dialog.style.display = 'none';
+                closeEquipmentDialog();
+            }
+        }
+        
+        if (e.key === 'Enter' && document.getElementById('equipment-dialog').style.display === 'flex') {
+            const active = document.activeElement;
+            if (active && (active.id === 'dialog-name' || active.id === 'dialog-power' || active.id === 'dialog-channels')) {
+                e.preventDefault();
+                if (active.id === 'dialog-name') {
+                    document.getElementById('dialog-power').focus();
+                } else if (active.id === 'dialog-power') {
+                    document.getElementById('dialog-channels').focus();
+                } else if (active.id === 'dialog-channels') {
+                    saveEquipment();
+                }
             }
         }
     });
