@@ -9,10 +9,15 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="DMX">
+    <meta name="apple-mobile-web-app-title" content="DMX Calc">
+    
+    <!-- Apple PWA настройки -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     
     <style>
-        /* ВАШ ОРИГИНАЛЬНЫЙ CSS КОД БЕЗ ИЗМЕНЕНИЙ */
+        /* ВАШ ОРИГИНАЛЬНЫЙ CSS КОД С ИСПРАВЛЕНИЯМИ */
         * {
             margin: 0;
             padding: 0;
@@ -28,17 +33,29 @@
             -webkit-text-size-adjust: 100%;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            /* Предотвращаем увеличение при двойном тапе */
+            touch-action: manipulation;
+        }
+        
+        button, input {
+            font-family: inherit;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border-radius: 0;
         }
         
         button {
-            font-family: inherit;
             cursor: pointer;
             outline: none;
             border: none;
+            /* Убираем задержку на тап на iOS */
+            -webkit-tap-highlight-color: transparent;
         }
         
         input {
-            font-family: inherit;
+            -webkit-appearance: none;
+            appearance: none;
         }
         
         /* ОСНОВНОЙ КОНТЕЙНЕР */
@@ -47,6 +64,8 @@
             margin: 0 auto;
             padding-bottom: 20px;
             min-height: 100vh;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
         
         /* ЗАГОЛОВОК ОБОРУДОВАНИЯ */
@@ -59,6 +78,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            padding-top: env(safe-area-inset-top);
         }
         
         .equipment-toggle {
@@ -72,6 +92,7 @@
             height: 100%;
             cursor: pointer;
             padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
         
         /* ЗАКРЕПЛЕННОЕ ОБОРУДОВАНИЕ */
@@ -135,6 +156,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+            /* Убираем эффект увеличения на iOS */
+            transform: translateZ(0);
         }
         
         .address-display {
@@ -147,6 +171,9 @@
             font-size: 32px;
             font-weight: bold;
             text-align: center;
+            /* Предотвращаем выделение текста */
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .surrounding-addresses {
@@ -161,6 +188,8 @@
             flex: 1;
             display: flex;
             gap: 8px;
+            /* Исправляем: адреса в строчку, а не в столбик */
+            flex-direction: row !important;
         }
         
         .address-group span {
@@ -169,6 +198,9 @@
             color: #AAAAAA;
             font-size: 12px;
             min-width: 30px;
+            /* Предотвращаем выделение текста */
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .arrows {
@@ -180,6 +212,9 @@
         .arrow {
             color: #666666;
             font-size: 14px;
+            /* Предотвращаем выделение текста */
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .empty-space {
@@ -207,6 +242,9 @@
             width: 60px;
             text-align: right;
             padding-right: 8px;
+            /* Предотвращаем выделение текста */
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .number-input {
@@ -220,6 +258,9 @@
             font-weight: bold;
             text-align: center;
             padding: 12px 8px;
+            /* Убираем стандартные стили iOS */
+            -webkit-appearance: none;
+            appearance: none;
         }
         
         .number-input:focus {
@@ -239,15 +280,18 @@
             margin: 16px 16px;
         }
         
-        /* КНОПКИ ПИНОВ */
+        /* КНОПКИ ПИНОВ - ИСПРАВЛЕНО: всегда 9 плиток в один ряд */
         .pins-section {
             margin: 0 8px 16px 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .pins-grid {
             display: grid;
             grid-template-columns: repeat(9, 1fr);
-            gap: 8px;
+            gap: 4px;
+            min-width: 600px; /* Минимальная ширина для 9 плиток */
         }
         
         .pin-btn {
@@ -260,6 +304,9 @@
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            /* Убираем эффект увеличения на iOS */
+            transform: translateZ(0);
         }
         
         .pin-btn.selected {
@@ -276,6 +323,9 @@
             margin-bottom: 16px;
             padding: 0 16px;
             min-height: 40px;
+            /* Предотвращаем выделение текста */
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .reset-btn {
@@ -290,6 +340,7 @@
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
         }
         
         /* ПАНЕЛЬ ОБОРУДОВАНИЯ */
@@ -303,6 +354,7 @@
             z-index: 1000;
             overflow-y: auto;
             display: none;
+            padding-top: env(safe-area-inset-top);
         }
         
         .equipment-panel-header {
@@ -323,6 +375,7 @@
             font-weight: bold;
             cursor: pointer;
             padding: 8px;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .search-input {
@@ -335,6 +388,8 @@
             border-radius: 8px;
             color: white;
             font-size: 14px;
+            -webkit-appearance: none;
+            appearance: none;
         }
         
         .search-input::placeholder {
@@ -353,6 +408,7 @@
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .equipment-list-container {
@@ -387,6 +443,7 @@
             min-width: 40px;
             cursor: pointer;
             flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .pin-star-btn.pinned {
@@ -436,6 +493,8 @@
             border-radius: 4px;
             color: white;
             font-size: 14px;
+            -webkit-appearance: none;
+            appearance: none;
         }
         
         .dialog-input::placeholder {
@@ -457,6 +516,7 @@
             font-weight: bold;
             cursor: pointer;
             min-width: 70px;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .cancel-btn {
@@ -475,16 +535,19 @@
             color: white;
         }
         
-        /* АДАПТИВНОСТЬ ДЛЯ IPHONE */
+        /* АДАПТИВНОСТЬ ДЛЯ IPHONE - ИСПРАВЛЕНО */
         @media (max-width: 768px) {
             .pins-grid {
-                grid-template-columns: repeat(3, 1fr);
+                /* На iPhone пины всегда в один ряд с горизонтальным скроллом */
+                grid-template-columns: repeat(9, 1fr);
                 gap: 4px;
+                min-width: 600px;
             }
             
             .pin-btn {
                 height: 60px;
                 font-size: 16px;
+                min-width: 60px;
             }
             
             .address-display {
@@ -499,12 +562,41 @@
             }
             
             .address-group {
-                flex-direction: column;
+                /* На iPhone адреса тоже в строчку */
+                flex-direction: row !important;
                 gap: 4px;
             }
             
             .address-group span {
                 font-size: 11px;
+            }
+            
+            .pins-section {
+                margin: 0 4px 16px 4px;
+            }
+        }
+        
+        /* Дополнительные исправления для очень узких экранов */
+        @media (max-width: 350px) {
+            .round-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+            
+            .address-display {
+                font-size: 24px;
+                height: 60px;
+            }
+            
+            .pins-grid {
+                gap: 3px;
+            }
+            
+            .pin-btn {
+                height: 55px;
+                font-size: 15px;
+                min-width: 55px;
             }
         }
         
@@ -527,6 +619,7 @@
         /* СКРОЛЛБАР */
         ::-webkit-scrollbar {
             width: 6px;
+            height: 6px;
         }
         
         ::-webkit-scrollbar-track {
@@ -541,11 +634,29 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+        
+        /* Предотвращаем увеличение на двойной тап */
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        input, textarea {
+            -webkit-user-select: text;
+            -khtml-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
     </style>
 </head>
 <body>
     <!-- ИНСТРУКЦИЯ ДЛЯ ПОЛЬЗОВАТЕЛЯ (скрыта в приложении) -->
-    <div id="instructions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; color: white; padding: 20px; z-index: 9999; overflow-y: auto;">
+    <div id="instructions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; color: white; padding: 20px; z-index: 9999; overflow-y: auto; padding-top: env(safe-area-inset-top);">
         <h2>📱 Установка приложения:</h2>
         <p>Для установки на iPhone:</p>
         <p>1. Нажмите кнопку "Поделиться" (квадрат со стрелкой)</p>
@@ -570,19 +681,23 @@
         <!-- Отображение адреса -->
         <div class="address-section">
             <div class="address-controls">
-                <button class="round-btn minus-btn" onclick="decreaseAddress()">-</button>
+                <button class="round-btn minus-btn" onclick="decreaseAddress()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">-</button>
                 <div id="address-display" class="address-display">1</div>
-                <button class="round-btn plus-btn" onclick="increaseAddress()">+</button>
+                <button class="round-btn plus-btn" onclick="increaseAddress()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">+</button>
             </div>
 
             <div class="surrounding-addresses">
-                <div class="address-group" id="prev-addresses"></div>
+                <div class="address-group" id="prev-addresses">
+                    <span></span><span></span><span></span>
+                </div>
                 <div class="arrows">
                     <span class="arrow">←</span>
                     <div class="empty-space"></div>
                     <span class="arrow">→</span>
                 </div>
-                <div class="address-group" id="next-addresses"></div>
+                <div class="address-group" id="next-addresses">
+                    <span></span><span></span><span></span>
+                </div>
             </div>
         </div>
 
@@ -611,12 +726,12 @@
         </div>
 
         <!-- Кнопка сброса -->
-        <button class="reset-btn" onclick="resetAll()">СБРОСИТЬ ВСЕ</button>
+        <button class="reset-btn" onclick="resetAll()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">СБРОСИТЬ ВСЕ</button>
 
         <!-- Панель оборудования (скрытая) -->
         <div id="equipment-panel" class="equipment-panel">
             <div class="equipment-panel-header">
-                <button class="close-btn" onclick="toggleEquipmentList()">
+                <button class="close-btn" onclick="toggleEquipmentList()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">
                     ✕ ЗАКРЫТЬ
                 </button>
             </div>
@@ -624,7 +739,7 @@
             <input type="text" id="equipment-search" class="search-input" 
                    placeholder="Поиск оборудования..." oninput="filterEquipment(this.value)">
 
-            <button class="add-equipment-btn" onclick="showAddEquipmentDialog()">
+            <button class="add-equipment-btn" onclick="showAddEquipmentDialog()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">
                 + ДОБАВИТЬ ПРИБОР
             </button>
 
@@ -644,9 +759,9 @@
                 <input type="text" id="dialog-channels" class="dialog-input" placeholder="DMX каналы (через /, например: 16/20 или DIM)">
             </div>
             <div class="dialog-buttons">
-                <button class="dialog-btn cancel-btn" onclick="closeEquipmentDialog()">Отмена</button>
-                <button class="dialog-btn delete-btn" id="delete-btn" style="display: none;" onclick="deleteEquipment()">Удалить</button>
-                <button class="dialog-btn save-btn" onclick="saveEquipment()">Сохранить</button>
+                <button class="dialog-btn cancel-btn" onclick="closeEquipmentDialog()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">Отмена</button>
+                <button class="dialog-btn delete-btn" id="delete-btn" style="display: none;" onclick="deleteEquipment()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">Удалить</button>
+                <button class="dialog-btn save-btn" onclick="saveEquipment()" ontouchstart="handleTouchStart(event)" ontouchend="handleTouchEnd(event)">Сохранить</button>
             </div>
         </div>
     </div>
@@ -657,6 +772,8 @@
     <script>
         // ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ ДЛЯ ПРИЛОЖЕНИЯ
         let dmxApp = null;
+        let touchStartTime = 0;
+        let touchStartElement = null;
 
         // ============================================
         // КЛАСС DMX КАЛЬКУЛЯТОРА
@@ -876,6 +993,9 @@
                     button.textContent = (i + 1).toString();
                     button.dataset.index = i;
                     button.addEventListener('click', () => this.togglePin(i));
+                    // Добавляем обработчики для iOS
+                    button.addEventListener('touchstart', handleTouchStart, {passive: true});
+                    button.addEventListener('touchend', handleTouchEnd, {passive: true});
                     pinsContainer.appendChild(button);
                 }
 
@@ -902,20 +1022,16 @@
             }
 
             increaseAddress() {
-                console.log('Увеличиваем адрес. Текущий:', this.currentAddress, 'Шаг:', this.currentStep);
                 const step = parseInt(document.getElementById('step-input').value) || 1;
                 this.currentStep = step;
                 this.currentAddress = this.getNextAddress(this.currentAddress, this.currentStep);
-                console.log('Новый адрес:', this.currentAddress);
                 this.updateUI();
             }
 
             decreaseAddress() {
-                console.log('Уменьшаем адрес. Текущий:', this.currentAddress, 'Шаг:', this.currentStep);
                 const step = parseInt(document.getElementById('step-input').value) || 1;
                 this.currentStep = step;
                 this.currentAddress = this.getPrevAddress(this.currentAddress, this.currentStep);
-                console.log('Новый адрес:', this.currentAddress);
                 this.updateUI();
             }
 
@@ -957,8 +1073,6 @@
 
             updateResult() {
                 const addr = this.currentAddress;
-                
-                console.log('updateResult: обновляем отображение для адреса', addr);
 
                 // Обновление интерфейса
                 const addressDisplay = document.getElementById('address-display');
@@ -1014,8 +1128,13 @@
                 const prevContainer = document.getElementById('prev-addresses');
                 const nextContainer = document.getElementById('next-addresses');
                 
-                prevContainer.innerHTML = '';
-                nextContainer.innerHTML = '';
+                // Очищаем контейнеры
+                while (prevContainer.firstChild) {
+                    prevContainer.removeChild(prevContainer.firstChild);
+                }
+                while (nextContainer.firstChild) {
+                    nextContainer.removeChild(nextContainer.firstChild);
+                }
 
                 // Предыдущие адреса
                 for (let i = 0; i < 3; i++) {
@@ -1048,8 +1167,6 @@
             }
 
             updateUI() {
-                console.log('updateUI: Обновляем интерфейс. Адрес:', this.currentAddress);
-                
                 // Обновляем поля ввода
                 document.getElementById('address-display').textContent = this.currentAddress;
                 document.getElementById('address-input').value = this.currentAddress;
@@ -1099,11 +1216,15 @@
                     editBtn.className = 'edit-btn';
                     editBtn.textContent = '✎';
                     editBtn.onclick = () => this.showEditEquipmentDialog(item);
+                    editBtn.addEventListener('touchstart', handleTouchStart, {passive: true});
+                    editBtn.addEventListener('touchend', handleTouchEnd, {passive: true});
                     
                     const pinBtn = document.createElement('button');
                     pinBtn.className = `pin-star-btn ${item.pinned ? 'pinned' : ''}`;
                     pinBtn.textContent = item.pinned ? '★' : '☆';
                     pinBtn.onclick = () => this.togglePinEquipment(item);
+                    pinBtn.addEventListener('touchstart', handleTouchStart, {passive: true});
+                    pinBtn.addEventListener('touchend', handleTouchEnd, {passive: true});
                     
                     itemDiv.appendChild(textDiv);
                     itemDiv.appendChild(editBtn);
@@ -1135,6 +1256,8 @@
                     unpinBtn.className = 'unpin-btn';
                     unpinBtn.textContent = '✕';
                     unpinBtn.onclick = () => this.togglePinEquipment(item);
+                    unpinBtn.addEventListener('touchstart', handleTouchStart, {passive: true});
+                    unpinBtn.addEventListener('touchend', handleTouchEnd, {passive: true});
                     
                     itemDiv.appendChild(textDiv);
                     itemDiv.appendChild(unpinBtn);
@@ -1335,24 +1458,65 @@
         }
 
         // ============================================
+        // ФУНКЦИИ ДЛЯ ИСПРАВЛЕНИЯ ПРОБЛЕМ iOS
+        // ============================================
+
+        function handleTouchStart(event) {
+            touchStartTime = Date.now();
+            touchStartElement = event.currentTarget;
+            // Предотвращаем зум на iOS
+            event.preventDefault();
+        }
+
+        function handleTouchEnd(event) {
+            const touchEndTime = Date.now();
+            const touchDuration = touchEndTime - touchStartTime;
+            
+            // Если тап был коротким (меньше 300мс) - это обычный клик
+            // Если долгий - предотвращаем действие (чтобы не увеличивалось)
+            if (touchDuration < 300 && touchStartElement === event.currentTarget) {
+                // Выполняем действие
+                return true;
+            } else {
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+        }
+
+        // Предотвращаем двойной тап для зума
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        // Предотвращаем зум на полях ввода
+        document.addEventListener('touchstart', function(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+
+        // ============================================
         // ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ HTML
         // ============================================
 
         function increaseAddress() {
-            console.log('Функция increaseAddress вызвана');
             if (dmxApp) {
                 dmxApp.increaseAddress();
-            } else {
-                console.error('dmxApp не инициализирован');
             }
         }
 
         function decreaseAddress() {
-            console.log('Функция decreaseAddress вызвана');
             if (dmxApp) {
                 dmxApp.decreaseAddress();
-            } else {
-                console.error('dmxApp не инициализирован');
             }
         }
 
@@ -1444,6 +1608,12 @@
                     }
                 }
             }
+        });
+
+        // Запрещаем контекстное меню на iOS
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
         });
     </script>
 </body>
