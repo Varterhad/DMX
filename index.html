@@ -952,9 +952,23 @@
                 addr = this.normalizeAddress(addr);
                 this.currentAddress = addr;
 
-                // Обновление интерфейса
-                document.getElementById('address-display').textContent = addr;
-                document.getElementById('address-input').value = addr;
+                // Обновление интерфейса - ВАЖНО: обновляем ВСЕ элементы
+                const addressDisplay = document.getElementById('address-display');
+                const addressInput = document.getElementById('address-input');
+                
+                console.log('updateResult: обновляем адрес на', addr);
+                console.log('addressDisplay:', addressDisplay);
+                console.log('addressInput:', addressInput);
+                
+                if (addressDisplay) {
+                    addressDisplay.textContent = addr;
+                    console.log('Установлен textContent для addressDisplay:', addr);
+                }
+                
+                if (addressInput) {
+                    addressInput.value = addr;
+                    console.log('Установлен value для addressInput:', addr);
+                }
 
                 // Обновление кнопок пинов
                 const pinButtons = document.querySelectorAll('.pin-btn');
@@ -972,7 +986,10 @@
                 }
                 pinsText += selectedPins.length > 0 ? selectedPins.join(',') : 'нет';
 
-                document.getElementById('result-text').innerHTML = `Адрес: ${addr}<br>${pinsText}`;
+                const resultText = document.getElementById('result-text');
+                if (resultText) {
+                    resultText.innerHTML = `Адрес: ${addr}<br>${pinsText}`;
+                }
                 
                 this.updateSurroundingAddresses();
                 this.saveToStorage();
@@ -984,8 +1001,10 @@
                 
                 addr = this.normalizeAddress(addr);
                 this.currentAddress = addr;
-                addressInput.value = addr;
+                
+                // ОБНОВЛЯЕМ ОТОБРАЖЕНИЕ АДРЕСА
                 document.getElementById('address-display').textContent = addr;
+                addressInput.value = addr;
 
                 // Сброс пинов
                 this.pinSelected = Array(9).fill(false);
@@ -1040,8 +1059,12 @@
 
             updateUI() {
                 console.log('updateUI: Обновляем интерфейс. Адрес:', this.currentAddress);
+                
+                // ОБНОВЛЯЕМ ОТОБРАЖЕНИЕ АДРЕСА В БОЛЬШОМ ПОЛЕ
                 document.getElementById('address-display').textContent = this.currentAddress;
                 document.getElementById('address-input').value = this.currentAddress;
+                
+                // Вызываем updateResult для обновления всего остального
                 this.updateResult();
                 this.updateSurroundingAddresses();
             }
@@ -1406,12 +1429,8 @@
                 }
             });
             
-            // PWA: Регистрация Service Worker
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js').catch(console.error);
-            }
-            
-            console.log('DMX Calculator initialized');
+            // Убираем ошибку с Service Worker, если файла нет
+            console.log('Приложение готово к работе');
         });
 
         // Обработка клавиатуры для диалогов
