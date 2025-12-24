@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DMX Калькулятор</title>
     
     <!-- PWA настройки -->
@@ -17,6 +17,7 @@
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
+            touch-action: manipulation; /* Предотвращаем двойной тап для зума */
         }
         
         body {
@@ -27,6 +28,19 @@
             -webkit-text-size-adjust: 100%;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            /* Запрещаем выделение текста и зум */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Разрешаем выделение только в полях ввода */
+        input, textarea {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
         
         button {
@@ -35,10 +49,17 @@
             outline: none;
             border: none;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
+            /* Убираем стандартное поведение iOS */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
         
         input {
             font-family: inherit;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
         
         /* ОСНОВНОЙ КОНТЕЙНЕР */
@@ -239,7 +260,7 @@
             margin: 16px 16px;
         }
         
-        /* КНОПКИ ПИНОВ - ИСПРАВЛЕНО: прямоугольные и в один ряд */
+        /* КНОПКИ ПИНОВ */
         .pins-section {
             margin: 0 8px 16px 8px;
         }
@@ -263,14 +284,15 @@
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.2s;
-            min-width: 0; /* Важно для flex-элементов */
+            min-width: 0;
             min-height: 60px;
-            /* Убираем все эффекты тапа на iOS */
             -webkit-tap-highlight-color: rgba(0,0,0,0);
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
+            /* Предотвращаем зум при двойном тапе */
+            touch-action: manipulation;
         }
         
         .pin-btn.selected {
@@ -314,6 +336,8 @@
             z-index: 1000;
             overflow-y: auto;
             display: none;
+            /* Запрещаем скролл родителя при открытой панели */
+            touch-action: pan-y;
         }
         
         .equipment-panel-header {
@@ -486,7 +510,7 @@
             color: white;
         }
         
-        /* АДАПТИВНОСТЬ ДЛЯ IPHONE - ИСПРАВЛЕНО */
+        /* АДАПТИВНОСТЬ ДЛЯ IPHONE */
         @media (max-width: 768px) {
             .pins-grid {
                 display: flex;
@@ -495,7 +519,7 @@
             }
             
             .pin-btn {
-                height: 70px; /* Выше для удобства тапа */
+                height: 70px;
                 font-size: 14px;
                 min-width: 0;
                 padding: 0 2px;
@@ -514,7 +538,7 @@
             }
             
             .address-group {
-                flex-direction: row; /* Адреса в строчку! */
+                flex-direction: row;
                 gap: 4px;
             }
             
@@ -532,9 +556,20 @@
                 font-size: 15px;
                 width: 55px;
             }
+            
+            /* Добавляем отступы для безопасной зоны на iPhone X+ */
+            .app-container {
+                padding-left: env(safe-area-inset-left);
+                padding-right: env(safe-area-inset-right);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            
+            .equipment-header {
+                padding-top: env(safe-area-inset-top);
+            }
         }
         
-        /* Для очень узких экранов - уменьшаем пины, но сохраняем прямоугольную форму */
+        /* Для очень узких экранов */
         @media (max-width: 350px) {
             .pin-btn {
                 height: 65px;
@@ -713,6 +748,59 @@
     <script>
         // ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ ДЛЯ ПРИЛОЖЕНИЯ
         let dmxApp = null;
+
+        // ============================================
+        // ФУНКЦИЯ ДЛЯ ПРЕДОТВРАЩЕНИЯ ДВОЙНОГО ТАПА
+        // ============================================
+        
+        let lastTouchTime = 0;
+        const DOUBLE_TAP_DELAY = 300; // 300ms
+        
+        function preventDoubleTapZoom(event) {
+            const currentTime = new Date().getTime();
+            const timeDiff = currentTime - lastTouchTime;
+            
+            if (timeDiff < DOUBLE_TAP_DELAY) {
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+            
+            lastTouchTime = currentTime;
+            return true;
+        }
+        
+        // Добавляем обработчик для всего документа
+        document.addEventListener('touchstart', function(event) {
+            // Разрешаем двойной тап только на полях ввода
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // Для всех остальных элементов предотвращаем быстрый двойной тап
+            const now = Date.now();
+            if (now - lastTouchTime < DOUBLE_TAP_DELAY) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            lastTouchTime = now;
+        }, { passive: false });
+        
+        // Предотвращаем масштабирование при двойном тапе
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchTime < DOUBLE_TAP_DELAY) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+        
+        // Предотвращаем контекстное меню (долгое нажатие)
+        document.addEventListener('contextmenu', function(event) {
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+                event.preventDefault();
+                return false;
+            }
+        });
 
         // ============================================
         // КЛАСС DMX КАЛЬКУЛЯТОРА
