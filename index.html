@@ -559,7 +559,7 @@
     <div class="app-container">
         <!-- Панель оборудования -->
         <div class="equipment-header">
-            <button class="equipment-toggle" onclick="app.toggleEquipmentList()">
+            <button class="equipment-toggle" onclick="toggleEquipmentList()">
                 ОБОРУДОВАНИЕ ▼
             </button>
         </div>
@@ -570,9 +570,9 @@
         <!-- Отображение адреса -->
         <div class="address-section">
             <div class="address-controls">
-                <button class="round-btn minus-btn" onclick="app.decreaseAddress()">-</button>
+                <button class="round-btn minus-btn" onclick="decreaseAddress()">-</button>
                 <div id="address-display" class="address-display">1</div>
-                <button class="round-btn plus-btn" onclick="app.increaseAddress()">+</button>
+                <button class="round-btn plus-btn" onclick="increaseAddress()">+</button>
             </div>
 
             <div class="surrounding-addresses">
@@ -590,11 +590,11 @@
         <div class="input-section">
             <div class="input-row">
                 <span class="input-label">ШАГ:</span>
-                <input type="number" id="step-input" class="number-input" value="1" min="1" max="512" onchange="app.updateStepValue()">
+                <input type="number" id="step-input" class="number-input" value="1" min="1" max="512" onchange="updateStepValue()">
             </div>
             <div class="input-row">
                 <span class="input-label">АДРЕС:</span>
-                <input type="number" id="address-input" class="number-input" value="1" min="1" max="512" onchange="app.setPinsFromAddress()">
+                <input type="number" id="address-input" class="number-input" value="1" min="1" max="512" onchange="setPinsFromAddress()">
             </div>
         </div>
 
@@ -611,20 +611,20 @@
         </div>
 
         <!-- Кнопка сброса -->
-        <button class="reset-btn" onclick="app.resetAll()">СБРОСИТЬ ВСЕ</button>
+        <button class="reset-btn" onclick="resetAll()">СБРОСИТЬ ВСЕ</button>
 
         <!-- Панель оборудования (скрытая) -->
         <div id="equipment-panel" class="equipment-panel">
             <div class="equipment-panel-header">
-                <button class="close-btn" onclick="app.toggleEquipmentList()">
+                <button class="close-btn" onclick="toggleEquipmentList()">
                     ✕ ЗАКРЫТЬ
                 </button>
             </div>
 
             <input type="text" id="equipment-search" class="search-input" 
-                   placeholder="Поиск оборудования..." oninput="app.filterEquipment(this.value)">
+                   placeholder="Поиск оборудования..." oninput="filterEquipment(this.value)">
 
-            <button class="add-equipment-btn" onclick="app.showAddEquipmentDialog()">
+            <button class="add-equipment-btn" onclick="showAddEquipmentDialog()">
                 + ДОБАВИТЬ ПРИБОР
             </button>
 
@@ -644,9 +644,9 @@
                 <input type="text" id="dialog-channels" class="dialog-input" placeholder="DMX каналы (через /, например: 16/20 или DIM)">
             </div>
             <div class="dialog-buttons">
-                <button class="dialog-btn cancel-btn" onclick="app.closeEquipmentDialog()">Отмена</button>
-                <button class="dialog-btn delete-btn" id="delete-btn" style="display: none;" onclick="app.deleteEquipment()">Удалить</button>
-                <button class="dialog-btn save-btn" onclick="app.saveEquipment()">Сохранить</button>
+                <button class="dialog-btn cancel-btn" onclick="closeEquipmentDialog()">Отмена</button>
+                <button class="dialog-btn delete-btn" id="delete-btn" style="display: none;" onclick="deleteEquipment()">Удалить</button>
+                <button class="dialog-btn save-btn" onclick="saveEquipment()">Сохранить</button>
             </div>
         </div>
     </div>
@@ -655,766 +655,766 @@
     <div id="loader" class="loader">Загрузка...</div>
 
     <script>
-    // ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ ДЛЯ ПРИЛОЖЕНИЯ
-    let dmxApp = null;
+        // ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ ДЛЯ ПРИЛОЖЕНИЯ
+        let dmxApp = null;
 
-    // ============================================
-    // КЛАСС DMX КАЛЬКУЛЯТОРА
-    // ============================================
-    
-    class EquipmentItem {
-        constructor(name, power, channels, pinned = false, isCustom = false) {
-            this.name = name;
-            this.power = power;
-            this.channels = channels;
-            this.pinned = pinned;
-            this.isCustom = isCustom;
-        }
-
-        toString() {
-            return `${this.name} ${this.power} ${this.channels}ch`;
-        }
-
-        toStorageString() {
-            return `${this.name}||${this.power}||${this.channels}||${this.pinned}||${this.isCustom}`;
-        }
-
-        static fromStorageString(storageString) {
-            const parts = storageString.split('||');
-            if (parts.length === 5) {
-                return new EquipmentItem(
-                    parts[0],
-                    parts[1],
-                    parts[2],
-                    parts[3] === 'true',
-                    parts[4] === 'true'
-                );
-            }
-            return null;
-        }
-
-        getFirstChannel() {
-            if (!this.channels || this.channels === '0' || 
-                this.channels === 'DIM' || this.channels === 'Пульт ДУ') {
-                return 0;
-            }
-            try {
-                const firstChannel = this.channels.split('/')[0];
-                return parseInt(firstChannel.trim());
-            } catch (e) {
-                return 0;
-            }
-        }
-    }
-
-    class DmxCalculator {
-        constructor() {
-            // DMX константы
-            this.DMX_TOTAL_CHANNELS = 512;
-            
-            // Текущие значения
-            this.currentStep = 1;
-            this.currentAddress = 1;
-            this.pinSelected = Array(9).fill(false);
-            
-            // Оборудование
-            this.allEquipment = [];
-            this.pinnedEquipment = [];
-            this.editingEquipment = null;
-            
-            // Инициализация
-            this.initializeEquipment();
-            this.loadFromStorage();
-            this.initializeUI();
-            this.updateUI();
-        }
-
-        initializeEquipment() {
-            // Clay Paky
-            this.allEquipment.push(new EquipmentItem("Clay Paky Scenius Unico", "1800W", "40/44"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky Alfa Spot HPE 1500", "2000W", "36/40"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky Alfa Profile QWO 800", "1200W", "32/36"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky Sharpy", "350W", "16/20"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky Sharpy Wash 330", "550W", "19/22"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky Super Sharpy", "700W", "24/28"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky Mythos", "700W", "30/34"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky A.LEDA B-EYE K20", "850W", "21/35/111/148"));
-            this.allEquipment.push(new EquipmentItem("Clay Paky Stormy CC", "850W", "7/10/14"));
-
-            // Martin
-            this.allEquipment.push(new EquipmentItem("Martin Mac2000 Wash", "1500W", "19/21"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac2000 Performance", "1500W", "28/31"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac2000 Profile", "1500W", "20/24"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac600", "750W", "10/12/14"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac550", "600W", "21/27"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac101", "123W", "8/12"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac Viper Performance", "1350W", "32/40"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac Quantum", "1020W", "17/33"));
-            this.allEquipment.push(new EquipmentItem("Martin Mac Aura XB", "400W", "14/25"));
-            this.allEquipment.push(new EquipmentItem("Martin Atomic 3000", "27А", "1/3/4"));
-
-            // JBLighting
-            this.allEquipment.push(new EquipmentItem("JBLighting A 7", "350W", "13/15/16/19"));
-            this.allEquipment.push(new EquipmentItem("JBLighting A 12", "995W", "15/19/18/22/38"));
-
-            // GLP
-            this.allEquipment.push(new EquipmentItem("GLP IMPRESSION", "350W", "10/13/14"));
-
-            // SHOW SOLUTIONS
-            this.allEquipment.push(new EquipmentItem("SHOW SOLUTIONS V-2033", "4200W", "12"));
-
-            // DIA Lighting
-            this.allEquipment.push(new EquipmentItem("DIA Lighting LED BAR 48 RGBW", "100W", "3/4/5/6/11"));
-            this.allEquipment.push(new EquipmentItem("DIA Lighting LED Battery Wash Beam", "95W", "5/9/12"));
-            this.allEquipment.push(new EquipmentItem("SlimPro 18 QuadColor RGBW", "150W", "4/6/9"));
-            this.allEquipment.push(new EquipmentItem("DIA Lighting IS200", "350W", "16"));
-
-            // SGM
-            this.allEquipment.push(new EquipmentItem("SGM G-spot", "1100W", "24/30"));
-            this.allEquipment.push(new EquipmentItem("SGM P2", "200W", "3/6/9/12/15/22"));
-            this.allEquipment.push(new EquipmentItem("SGM P5", "450W", "3/4/6/8/9/10"));
-            this.allEquipment.push(new EquipmentItem("SGM Q7", "465W", "3/4/6/8"));
-            this.allEquipment.push(new EquipmentItem("SGM XC-5 Color LED strobe", "360W", "1/2/3/4/6/7"));
-
-            // THOMAS
-            this.allEquipment.push(new EquipmentItem("THOMAS PixelLine 1044", "164W", "3/4/10/54/61"));
-            this.allEquipment.push(new EquipmentItem("THOMAS Blinder 2 DIM", "1300W", "1"));
-            this.allEquipment.push(new EquipmentItem("THOMAS Blinder 4 DIM", "2600W", "1"));
-            this.allEquipment.push(new EquipmentItem("THOMAS Blinder 8 DIM", "5200W", "1"));
-
-            // RGB Lines
-            this.allEquipment.push(new EquipmentItem("RGB Line350", "50W", "0"));
-            this.allEquipment.push(new EquipmentItem("RGB Line1000", "150W", "0"));
-
-            // ShowTec
-            this.allEquipment.push(new EquipmentItem("ShowTec EventSpot 1900", "45W", "3/4/5/10"));
-            this.allEquipment.push(new EquipmentItem("ShowTec Blinder 2DMX", "1300W", "1"));
-            this.allEquipment.push(new EquipmentItem("ShowTec Blinder 4DMX", "2600W", "2"));
-            this.allEquipment.push(new EquipmentItem("ShowTec Blinder 8DMX", "5200W", "4"));
-            this.allEquipment.push(new EquipmentItem("ShowTec Matrix 5*5 Blinder", "1900W", "4/9/25/29"));
-            this.allEquipment.push(new EquipmentItem("ShowTec Sunstrip Active", "800W", "1/2/5/10"));
-            this.allEquipment.push(new EquipmentItem("ShowTec Cobra Strip", "500W", "1/2/5/10"));
-
-            // BRITEQ
-            this.allEquipment.push(new EquipmentItem("BRITEQ POWERMATRIX 5*5-RGB Mk2", "750W", "4/5/6/11/25/75/81/100/106/125/131"));
-            this.allEquipment.push(new EquipmentItem("BRITEQ BT-VINTAGE", "980W", "5/6/7"));
-
-            // LL
-            this.allEquipment.push(new EquipmentItem("LL Stage Beam 6 Led", "55W", "6"));
-
-            // AMERICAN DJ
-            this.allEquipment.push(new EquipmentItem("AMERICAN DJ REVO III LED", "50W", "4/10"));
-
-            // ETC
-            this.allEquipment.push(new EquipmentItem("ETC Sours Four 26", "575W", "DIM"));
-            this.allEquipment.push(new EquipmentItem("ETC Sours Four JR 36", "575W", "DIM"));
-            this.allEquipment.push(new EquipmentItem("ETC Sours Four Zoom 15-30", "575W", "DIM"));
-            this.allEquipment.push(new EquipmentItem("ETC Sours Four Zoom 25-50", "750W", "DIM"));
-
-            // Arri
-            this.allEquipment.push(new EquipmentItem("Arri Studio 2000", "2000W", "DIM"));
-
-            // PAR Fixtures
-            this.allEquipment.push(new EquipmentItem("Par 16", "50W", "DIM"));
-            this.allEquipment.push(new EquipmentItem("Par 38", "90W", "DIM"));
-            this.allEquipment.push(new EquipmentItem("Par 56", "300W", "DIM"));
-            this.allEquipment.push(new EquipmentItem("Par 64", "1000W", "DIM"));
-            this.allEquipment.push(new EquipmentItem("Bar 6 *Par 64", "6000W", "DIM"));
-
-            // EUROLITE
-            this.allEquipment.push(new EquipmentItem("EUROLITE LED Par-56 floor36", "16W", "5"));
-            this.allEquipment.push(new EquipmentItem("EUROLITE LED Par-64 spot36", "32W", "6"));
-
-            // COEMAR
-            this.allEquipment.push(new EquipmentItem("COEMAR PAR Lite LED Silver", "55W", "6"));
-            this.allEquipment.push(new EquipmentItem("COEMAR PIN Lite LED Silver", "54W", "6"));
-            this.allEquipment.push(new EquipmentItem("COEMAR PANORAMA CYC POWER", "575W", "6"));
-
-            // GRIVEN
-            this.allEquipment.push(new EquipmentItem("GRIVEN KALEIDO", "650W", "5"));
-            this.allEquipment.push(new EquipmentItem("GRIVEN KOLORADO", "2800W", "5"));
-
-            // Desisti
-            this.allEquipment.push(new EquipmentItem("Desisti softlight 3111", "2000W", "0"));
-
-            // Studio Due
-            this.allEquipment.push(new EquipmentItem("Studio Due space flower", "3000W", "0"));
-            this.allEquipment.push(new EquipmentItem("Studio Due C34", "1100W", "13/15/20"));
-
-            // Sky
-            this.allEquipment.push(new EquipmentItem("Sky Rose 4000w", "4100W", "0"));
-            this.allEquipment.push(new EquipmentItem("Light Sky ip3000", "628W", "20/24"));
-            this.allEquipment.push(new EquipmentItem("Light Sky TX1810 Zoom", "246W", "10/16/20/24"));
-
-            // Color imagination
-            this.allEquipment.push(new EquipmentItem("Color imagination Si-171 minispot 250 Z", "290W", "14/16/18"));
-
-            // Robert Juliat
-            this.allEquipment.push(new EquipmentItem("Robert Juliat Aramis", "2500W", "0"));
-            this.allEquipment.push(new EquipmentItem("Robert Juliat Viktor", "1800W", "0"));
-            this.allEquipment.push(new EquipmentItem("Robert Juliat Flo", "1800W", "0"));
-
-            // LDR
-            this.allEquipment.push(new EquipmentItem("LDR Canto 1200", "1200W", "0"));
-            this.allEquipment.push(new EquipmentItem("LDR Canto 2000FF", "2000W", "0"));
-
-            // Fog/Haze Machines
-            this.allEquipment.push(new EquipmentItem("TourHazer", "1600W", "2"));
-            this.allEquipment.push(new EquipmentItem("DF-50", "437W", "1"));
-            this.allEquipment.push(new EquipmentItem("JEM TECHNOHAZE", "600W", "Пульт ДУ"));
-            this.allEquipment.push(new EquipmentItem("JEM TECHNOFOG", "750W", "Пульт ДУ"));
-            this.allEquipment.push(new EquipmentItem("ZR 33", "1500W", "1"));
-            this.allEquipment.push(new EquipmentItem("MDG ATMOSPHERE APS H.O.", "1415W", "2"));
-        }
-
-        initializeUI() {
-            // Создание кнопок пинов
-            const pinsContainer = document.getElementById('pins-container');
-            for (let i = 0; i < 9; i++) {
-                const button = document.createElement('button');
-                button.className = 'pin-btn';
-                button.textContent = (i + 1).toString();
-                button.dataset.index = i;
-                button.addEventListener('click', () => this.togglePin(i));
-                pinsContainer.appendChild(button);
+        // ============================================
+        // КЛАСС DMX КАЛЬКУЛЯТОРА
+        // ============================================
+        
+        class EquipmentItem {
+            constructor(name, power, channels, pinned = false, isCustom = false) {
+                this.name = name;
+                this.power = power;
+                this.channels = channels;
+                this.pinned = pinned;
+                this.isCustom = isCustom;
             }
 
-            // Отображение начальных адресов
-            this.updateSurroundingAddresses();
-            this.updateEquipmentList();
-            this.updatePinnedList();
-        }
-
-        normalizeAddress(address) {
-            let normalized = ((address - 1) % this.DMX_TOTAL_CHANNELS);
-            if (normalized < 0) {
-                normalized += this.DMX_TOTAL_CHANNELS;
+            toString() {
+                return `${this.name} ${this.power} ${this.channels}ch`;
             }
-            return normalized + 1;
-        }
 
-        getNextAddress(current, step) {
-            return this.normalizeAddress(current + step);
-        }
-
-        getPrevAddress(current, step) {
-            return this.normalizeAddress(current - step);
-        }
-
-        increaseAddress() {
-            this.currentAddress = this.getNextAddress(this.currentAddress, this.currentStep);
-            this.updateUI();
-        }
-
-        decreaseAddress() {
-            this.currentAddress = this.getPrevAddress(this.currentAddress, this.currentStep);
-            this.updateUI();
-        }
-
-        updateStepValue() {
-            const stepInput = document.getElementById('step-input');
-            let step = parseInt(stepInput.value) || 1;
-            
-            if (step < 1) {
-                step = 1;
-                stepInput.value = "1";
-            } else if (step > 512) {
-                step = step % this.DMX_TOTAL_CHANNELS;
-                if (step === 0) step = this.DMX_TOTAL_CHANNELS;
-                stepInput.value = step.toString();
+            toStorageString() {
+                return `${this.name}||${this.power}||${this.channels}||${this.pinned}||${this.isCustom}`;
             }
-            
-            this.currentStep = step;
-            this.updateSurroundingAddresses();
-        }
 
-        togglePin(index) {
-            this.pinSelected[index] = !this.pinSelected[index];
-            this.updateResult();
-        }
+            static fromStorageString(storageString) {
+                const parts = storageString.split('||');
+                if (parts.length === 5) {
+                    return new EquipmentItem(
+                        parts[0],
+                        parts[1],
+                        parts[2],
+                        parts[3] === 'true',
+                        parts[4] === 'true'
+                    );
+                }
+                return null;
+            }
 
-        updateResult() {
-            let addr = 0;
-            for (let i = 0; i < 9; i++) {
-                if (this.pinSelected[i]) {
-                    addr += Math.pow(2, i);
+            getFirstChannel() {
+                if (!this.channels || this.channels === '0' || 
+                    this.channels === 'DIM' || this.channels === 'Пульт ДУ') {
+                    return 0;
+                }
+                try {
+                    const firstChannel = this.channels.split('/')[0];
+                    return parseInt(firstChannel.trim());
+                } catch (e) {
+                    return 0;
                 }
             }
+        }
 
-            addr = this.normalizeAddress(addr);
-            this.currentAddress = addr;
+        class DmxCalculator {
+            constructor() {
+                // DMX константы
+                this.DMX_TOTAL_CHANNELS = 512;
+                
+                // Текущие значения
+                this.currentStep = 1;
+                this.currentAddress = 1;
+                this.pinSelected = Array(9).fill(false);
+                
+                // Оборудование
+                this.allEquipment = [];
+                this.pinnedEquipment = [];
+                this.editingEquipment = null;
+                
+                // Инициализация
+                this.initializeEquipment();
+                this.loadFromStorage();
+                this.initializeUI();
+                this.updateUI();
+            }
 
-            // Обновление интерфейса
-            document.getElementById('address-display').textContent = addr;
-            document.getElementById('address-input').value = addr;
+            initializeEquipment() {
+                // Clay Paky
+                this.allEquipment.push(new EquipmentItem("Clay Paky Scenius Unico", "1800W", "40/44"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky Alfa Spot HPE 1500", "2000W", "36/40"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky Alfa Profile QWO 800", "1200W", "32/36"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky Sharpy", "350W", "16/20"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky Sharpy Wash 330", "550W", "19/22"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky Super Sharpy", "700W", "24/28"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky Mythos", "700W", "30/34"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky A.LEDA B-EYE K20", "850W", "21/35/111/148"));
+                this.allEquipment.push(new EquipmentItem("Clay Paky Stormy CC", "850W", "7/10/14"));
 
-            // Обновление кнопок пинов
-            const pinButtons = document.querySelectorAll('.pin-btn');
-            pinButtons.forEach((btn, i) => {
-                btn.classList.toggle('selected', this.pinSelected[i]);
-            });
+                // Martin
+                this.allEquipment.push(new EquipmentItem("Martin Mac2000 Wash", "1500W", "19/21"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac2000 Performance", "1500W", "28/31"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac2000 Profile", "1500W", "20/24"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac600", "750W", "10/12/14"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac550", "600W", "21/27"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac101", "123W", "8/12"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac Viper Performance", "1350W", "32/40"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac Quantum", "1020W", "17/33"));
+                this.allEquipment.push(new EquipmentItem("Martin Mac Aura XB", "400W", "14/25"));
+                this.allEquipment.push(new EquipmentItem("Martin Atomic 3000", "27А", "1/3/4"));
 
-            // Формирование текста пинов
-            let pinsText = "Пины: ";
-            const selectedPins = [];
-            for (let i = 0; i < 9; i++) {
-                if (this.pinSelected[i]) {
-                    selectedPins.push(i + 1);
+                // JBLighting
+                this.allEquipment.push(new EquipmentItem("JBLighting A 7", "350W", "13/15/16/19"));
+                this.allEquipment.push(new EquipmentItem("JBLighting A 12", "995W", "15/19/18/22/38"));
+
+                // GLP
+                this.allEquipment.push(new EquipmentItem("GLP IMPRESSION", "350W", "10/13/14"));
+
+                // SHOW SOLUTIONS
+                this.allEquipment.push(new EquipmentItem("SHOW SOLUTIONS V-2033", "4200W", "12"));
+
+                // DIA Lighting
+                this.allEquipment.push(new EquipmentItem("DIA Lighting LED BAR 48 RGBW", "100W", "3/4/5/6/11"));
+                this.allEquipment.push(new EquipmentItem("DIA Lighting LED Battery Wash Beam", "95W", "5/9/12"));
+                this.allEquipment.push(new EquipmentItem("SlimPro 18 QuadColor RGBW", "150W", "4/6/9"));
+                this.allEquipment.push(new EquipmentItem("DIA Lighting IS200", "350W", "16"));
+
+                // SGM
+                this.allEquipment.push(new EquipmentItem("SGM G-spot", "1100W", "24/30"));
+                this.allEquipment.push(new EquipmentItem("SGM P2", "200W", "3/6/9/12/15/22"));
+                this.allEquipment.push(new EquipmentItem("SGM P5", "450W", "3/4/6/8/9/10"));
+                this.allEquipment.push(new EquipmentItem("SGM Q7", "465W", "3/4/6/8"));
+                this.allEquipment.push(new EquipmentItem("SGM XC-5 Color LED strobe", "360W", "1/2/3/4/6/7"));
+
+                // THOMAS
+                this.allEquipment.push(new EquipmentItem("THOMAS PixelLine 1044", "164W", "3/4/10/54/61"));
+                this.allEquipment.push(new EquipmentItem("THOMAS Blinder 2 DIM", "1300W", "1"));
+                this.allEquipment.push(new EquipmentItem("THOMAS Blinder 4 DIM", "2600W", "1"));
+                this.allEquipment.push(new EquipmentItem("THOMAS Blinder 8 DIM", "5200W", "1"));
+
+                // RGB Lines
+                this.allEquipment.push(new EquipmentItem("RGB Line350", "50W", "0"));
+                this.allEquipment.push(new EquipmentItem("RGB Line1000", "150W", "0"));
+
+                // ShowTec
+                this.allEquipment.push(new EquipmentItem("ShowTec EventSpot 1900", "45W", "3/4/5/10"));
+                this.allEquipment.push(new EquipmentItem("ShowTec Blinder 2DMX", "1300W", "1"));
+                this.allEquipment.push(new EquipmentItem("ShowTec Blinder 4DMX", "2600W", "2"));
+                this.allEquipment.push(new EquipmentItem("ShowTec Blinder 8DMX", "5200W", "4"));
+                this.allEquipment.push(new EquipmentItem("ShowTec Matrix 5*5 Blinder", "1900W", "4/9/25/29"));
+                this.allEquipment.push(new EquipmentItem("ShowTec Sunstrip Active", "800W", "1/2/5/10"));
+                this.allEquipment.push(new EquipmentItem("ShowTec Cobra Strip", "500W", "1/2/5/10"));
+
+                // BRITEQ
+                this.allEquipment.push(new EquipmentItem("BRITEQ POWERMATRIX 5*5-RGB Mk2", "750W", "4/5/6/11/25/75/81/100/106/125/131"));
+                this.allEquipment.push(new EquipmentItem("BRITEQ BT-VINTAGE", "980W", "5/6/7"));
+
+                // LL
+                this.allEquipment.push(new EquipmentItem("LL Stage Beam 6 Led", "55W", "6"));
+
+                // AMERICAN DJ
+                this.allEquipment.push(new EquipmentItem("AMERICAN DJ REVO III LED", "50W", "4/10"));
+
+                // ETC
+                this.allEquipment.push(new EquipmentItem("ETC Sours Four 26", "575W", "DIM"));
+                this.allEquipment.push(new EquipmentItem("ETC Sours Four JR 36", "575W", "DIM"));
+                this.allEquipment.push(new EquipmentItem("ETC Sours Four Zoom 15-30", "575W", "DIM"));
+                this.allEquipment.push(new EquipmentItem("ETC Sours Four Zoom 25-50", "750W", "DIM"));
+
+                // Arri
+                this.allEquipment.push(new EquipmentItem("Arri Studio 2000", "2000W", "DIM"));
+
+                // PAR Fixtures
+                this.allEquipment.push(new EquipmentItem("Par 16", "50W", "DIM"));
+                this.allEquipment.push(new EquipmentItem("Par 38", "90W", "DIM"));
+                this.allEquipment.push(new EquipmentItem("Par 56", "300W", "DIM"));
+                this.allEquipment.push(new EquipmentItem("Par 64", "1000W", "DIM"));
+                this.allEquipment.push(new EquipmentItem("Bar 6 *Par 64", "6000W", "DIM"));
+
+                // EUROLITE
+                this.allEquipment.push(new EquipmentItem("EUROLITE LED Par-56 floor36", "16W", "5"));
+                this.allEquipment.push(new EquipmentItem("EUROLITE LED Par-64 spot36", "32W", "6"));
+
+                // COEMAR
+                this.allEquipment.push(new EquipmentItem("COEMAR PAR Lite LED Silver", "55W", "6"));
+                this.allEquipment.push(new EquipmentItem("COEMAR PIN Lite LED Silver", "54W", "6"));
+                this.allEquipment.push(new EquipmentItem("COEMAR PANORAMA CYC POWER", "575W", "6"));
+
+                // GRIVEN
+                this.allEquipment.push(new EquipmentItem("GRIVEN KALEIDO", "650W", "5"));
+                this.allEquipment.push(new EquipmentItem("GRIVEN KOLORADO", "2800W", "5"));
+
+                // Desisti
+                this.allEquipment.push(new EquipmentItem("Desisti softlight 3111", "2000W", "0"));
+
+                // Studio Due
+                this.allEquipment.push(new EquipmentItem("Studio Due space flower", "3000W", "0"));
+                this.allEquipment.push(new EquipmentItem("Studio Due C34", "1100W", "13/15/20"));
+
+                // Sky
+                this.allEquipment.push(new EquipmentItem("Sky Rose 4000w", "4100W", "0"));
+                this.allEquipment.push(new EquipmentItem("Light Sky ip3000", "628W", "20/24"));
+                this.allEquipment.push(new EquipmentItem("Light Sky TX1810 Zoom", "246W", "10/16/20/24"));
+
+                // Color imagination
+                this.allEquipment.push(new EquipmentItem("Color imagination Si-171 minispot 250 Z", "290W", "14/16/18"));
+
+                // Robert Juliat
+                this.allEquipment.push(new EquipmentItem("Robert Juliat Aramis", "2500W", "0"));
+                this.allEquipment.push(new EquipmentItem("Robert Juliat Viktor", "1800W", "0"));
+                this.allEquipment.push(new EquipmentItem("Robert Juliat Flo", "1800W", "0"));
+
+                // LDR
+                this.allEquipment.push(new EquipmentItem("LDR Canto 1200", "1200W", "0"));
+                this.allEquipment.push(new EquipmentItem("LDR Canto 2000FF", "2000W", "0"));
+
+                // Fog/Haze Machines
+                this.allEquipment.push(new EquipmentItem("TourHazer", "1600W", "2"));
+                this.allEquipment.push(new EquipmentItem("DF-50", "437W", "1"));
+                this.allEquipment.push(new EquipmentItem("JEM TECHNOHAZE", "600W", "Пульт ДУ"));
+                this.allEquipment.push(new EquipmentItem("JEM TECHNOFOG", "750W", "Пульт ДУ"));
+                this.allEquipment.push(new EquipmentItem("ZR 33", "1500W", "1"));
+                this.allEquipment.push(new EquipmentItem("MDG ATMOSPHERE APS H.O.", "1415W", "2"));
+            }
+
+            initializeUI() {
+                // Создание кнопок пинов
+                const pinsContainer = document.getElementById('pins-container');
+                for (let i = 0; i < 9; i++) {
+                    const button = document.createElement('button');
+                    button.className = 'pin-btn';
+                    button.textContent = (i + 1).toString();
+                    button.dataset.index = i;
+                    button.addEventListener('click', () => this.togglePin(i));
+                    pinsContainer.appendChild(button);
                 }
-            }
-            pinsText += selectedPins.length > 0 ? selectedPins.join(',') : 'нет';
 
-            document.getElementById('result-text').innerHTML = `Адрес: ${addr}<br>${pinsText}`;
-            
-            this.updateSurroundingAddresses();
-        }
-
-        setPinsFromAddress() {
-            const addressInput = document.getElementById('address-input');
-            let addr = parseInt(addressInput.value) || 1;
-            
-            addr = this.normalizeAddress(addr);
-            this.currentAddress = addr;
-            addressInput.value = addr;
-            document.getElementById('address-display').textContent = addr;
-
-            // Сброс пинов
-            this.pinSelected = Array(9).fill(false);
-
-            // Установка пинов на основе адреса
-            for (let i = 0; i < 9; i++) {
-                const bit = Math.pow(2, i);
-                if ((addr & bit) !== 0) {
-                    this.pinSelected[i] = true;
-                }
-            }
-
-            this.updateResult();
-        }
-
-        updateSurroundingAddresses() {
-            const prevContainer = document.getElementById('prev-addresses');
-            const nextContainer = document.getElementById('next-addresses');
-            
-            prevContainer.innerHTML = '';
-            nextContainer.innerHTML = '';
-
-            // Предыдущие адреса
-            for (let i = 0; i < 3; i++) {
-                const stepsBack = (3 - i) * this.currentStep;
-                const prevAddress = this.getPrevAddress(this.currentAddress, stepsBack);
-                const span = document.createElement('span');
-                span.textContent = prevAddress;
-                prevContainer.appendChild(span);
-            }
-
-            // Следующие адреса
-            for (let i = 0; i < 3; i++) {
-                const stepsForward = (i + 1) * this.currentStep;
-                const nextAddress = this.getNextAddress(this.currentAddress, stepsForward);
-                const span = document.createElement('span');
-                span.textContent = nextAddress;
-                nextContainer.appendChild(span);
-            }
-        }
-
-        resetAll() {
-            this.currentStep = 1;
-            this.currentAddress = 1;
-            this.pinSelected = Array(9).fill(false);
-            
-            document.getElementById('step-input').value = "1";
-            document.getElementById('address-input').value = "1";
-            
-            this.updateUI();
-        }
-
-        updateUI() {
-            document.getElementById('address-display').textContent = this.currentAddress;
-            document.getElementById('address-input').value = this.currentAddress;
-            this.updateResult();
-            this.updateSurroundingAddresses();
-        }
-
-        // Работа с оборудованием
-        toggleEquipmentList() {
-            const panel = document.getElementById('equipment-panel');
-            const toggleBtn = document.querySelector('.equipment-toggle');
-            
-            if (panel.style.display === 'none') {
-                panel.style.display = 'block';
-                toggleBtn.textContent = 'ОБОРУДОВАНИЕ ▲';
+                // Отображение начальных адресов
+                this.updateSurroundingAddresses();
                 this.updateEquipmentList();
-            } else {
-                panel.style.display = 'none';
-                toggleBtn.textContent = 'ОБОРУДОВАНИЕ ▼';
-                document.getElementById('equipment-search').value = '';
+                this.updatePinnedList();
             }
-        }
 
-        updateEquipmentList() {
-            const container = document.getElementById('equipment-list-container');
-            const searchTerm = document.getElementById('equipment-search').value.toLowerCase();
-            
-            container.innerHTML = '';
-            
-            this.allEquipment.forEach((item, index) => {
-                if (searchTerm && !item.name.toLowerCase().includes(searchTerm) &&
-                    !item.power.toLowerCase().includes(searchTerm) &&
-                    !item.channels.toLowerCase().includes(searchTerm)) {
+            normalizeAddress(address) {
+                let normalized = ((address - 1) % this.DMX_TOTAL_CHANNELS);
+                if (normalized < 0) {
+                    normalized += this.DMX_TOTAL_CHANNELS;
+                }
+                return normalized + 1;
+            }
+
+            getNextAddress(current, step) {
+                return this.normalizeAddress(current + step);
+            }
+
+            getPrevAddress(current, step) {
+                return this.normalizeAddress(current - step);
+            }
+
+            increaseAddress() {
+                this.currentAddress = this.getNextAddress(this.currentAddress, this.currentStep);
+                this.updateUI();
+            }
+
+            decreaseAddress() {
+                this.currentAddress = this.getPrevAddress(this.currentAddress, this.currentStep);
+                this.updateUI();
+            }
+
+            updateStepValue() {
+                const stepInput = document.getElementById('step-input');
+                let step = parseInt(stepInput.value) || 1;
+                
+                if (step < 1) {
+                    step = 1;
+                    stepInput.value = "1";
+                } else if (step > 512) {
+                    step = step % this.DMX_TOTAL_CHANNELS;
+                    if (step === 0) step = this.DMX_TOTAL_CHANNELS;
+                    stepInput.value = step.toString();
+                }
+                
+                this.currentStep = step;
+                this.updateSurroundingAddresses();
+            }
+
+            togglePin(index) {
+                this.pinSelected[index] = !this.pinSelected[index];
+                this.updateResult();
+            }
+
+            updateResult() {
+                let addr = 0;
+                for (let i = 0; i < 9; i++) {
+                    if (this.pinSelected[i]) {
+                        addr += Math.pow(2, i);
+                    }
+                }
+
+                addr = this.normalizeAddress(addr);
+                this.currentAddress = addr;
+
+                // Обновление интерфейса
+                document.getElementById('address-display').textContent = addr;
+                document.getElementById('address-input').value = addr;
+
+                // Обновление кнопок пинов
+                const pinButtons = document.querySelectorAll('.pin-btn');
+                pinButtons.forEach((btn, i) => {
+                    btn.classList.toggle('selected', this.pinSelected[i]);
+                });
+
+                // Формирование текста пинов
+                let pinsText = "Пины: ";
+                const selectedPins = [];
+                for (let i = 0; i < 9; i++) {
+                    if (this.pinSelected[i]) {
+                        selectedPins.push(i + 1);
+                    }
+                }
+                pinsText += selectedPins.length > 0 ? selectedPins.join(',') : 'нет';
+
+                document.getElementById('result-text').innerHTML = `Адрес: ${addr}<br>${pinsText}`;
+                
+                this.updateSurroundingAddresses();
+            }
+
+            setPinsFromAddress() {
+                const addressInput = document.getElementById('address-input');
+                let addr = parseInt(addressInput.value) || 1;
+                
+                addr = this.normalizeAddress(addr);
+                this.currentAddress = addr;
+                addressInput.value = addr;
+                document.getElementById('address-display').textContent = addr;
+
+                // Сброс пинов
+                this.pinSelected = Array(9).fill(false);
+
+                // Установка пинов на основе адреса
+                for (let i = 0; i < 9; i++) {
+                    const bit = Math.pow(2, i);
+                    if ((addr & bit) !== 0) {
+                        this.pinSelected[i] = true;
+                    }
+                }
+
+                this.updateResult();
+            }
+
+            updateSurroundingAddresses() {
+                const prevContainer = document.getElementById('prev-addresses');
+                const nextContainer = document.getElementById('next-addresses');
+                
+                prevContainer.innerHTML = '';
+                nextContainer.innerHTML = '';
+
+                // Предыдущие адреса
+                for (let i = 0; i < 3; i++) {
+                    const stepsBack = (3 - i) * this.currentStep;
+                    const prevAddress = this.getPrevAddress(this.currentAddress, stepsBack);
+                    const span = document.createElement('span');
+                    span.textContent = prevAddress;
+                    prevContainer.appendChild(span);
+                }
+
+                // Следующие адреса
+                for (let i = 0; i < 3; i++) {
+                    const stepsForward = (i + 1) * this.currentStep;
+                    const nextAddress = this.getNextAddress(this.currentAddress, stepsForward);
+                    const span = document.createElement('span');
+                    span.textContent = nextAddress;
+                    nextContainer.appendChild(span);
+            }
+            }
+
+            resetAll() {
+                this.currentStep = 1;
+                this.currentAddress = 1;
+                this.pinSelected = Array(9).fill(false);
+                
+                document.getElementById('step-input').value = "1";
+                document.getElementById('address-input').value = "1";
+                
+                this.updateUI();
+            }
+
+            updateUI() {
+                document.getElementById('address-display').textContent = this.currentAddress;
+                document.getElementById('address-input').value = this.currentAddress;
+                this.updateResult();
+                this.updateSurroundingAddresses();
+            }
+
+            // Работа с оборудованием
+            toggleEquipmentList() {
+                const panel = document.getElementById('equipment-panel');
+                const toggleBtn = document.querySelector('.equipment-toggle');
+                
+                if (panel.style.display === 'none') {
+                    panel.style.display = 'block';
+                    toggleBtn.textContent = 'ОБОРУДОВАНИЕ ▲';
+                    this.updateEquipmentList();
+                } else {
+                    panel.style.display = 'none';
+                    toggleBtn.textContent = 'ОБОРУДОВАНИЕ ▼';
+                    document.getElementById('equipment-search').value = '';
+                }
+            }
+
+            updateEquipmentList() {
+                const container = document.getElementById('equipment-list-container');
+                const searchTerm = document.getElementById('equipment-search').value.toLowerCase();
+                
+                container.innerHTML = '';
+                
+                this.allEquipment.forEach((item, index) => {
+                    if (searchTerm && !item.name.toLowerCase().includes(searchTerm) &&
+                        !item.power.toLowerCase().includes(searchTerm) &&
+                        !item.channels.toLowerCase().includes(searchTerm)) {
+                        return;
+                    }
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'equipment-item';
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'equipment-item-text';
+                    textDiv.textContent = item.toString();
+                    
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'edit-btn';
+                    editBtn.textContent = '✎';
+                    editBtn.onclick = () => this.showEditEquipmentDialog(item);
+                    
+                    const pinBtn = document.createElement('button');
+                    pinBtn.className = `pin-star-btn ${item.pinned ? 'pinned' : ''}`;
+                    pinBtn.textContent = item.pinned ? '★' : '☆';
+                    pinBtn.onclick = () => this.togglePinEquipment(item);
+                    
+                    itemDiv.appendChild(textDiv);
+                    itemDiv.appendChild(editBtn);
+                    itemDiv.appendChild(pinBtn);
+                    container.appendChild(itemDiv);
+                });
+            }
+
+            updatePinnedList() {
+                const container = document.getElementById('pinned-container');
+                container.innerHTML = '';
+                
+                if (this.pinnedEquipment.length === 0) {
+                    container.style.display = 'none';
                     return;
                 }
                 
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'equipment-item';
+                container.style.display = 'block';
                 
-                const textDiv = document.createElement('div');
-                textDiv.className = 'equipment-item-text';
-                textDiv.textContent = item.toString();
-                
-                const editBtn = document.createElement('button');
-                editBtn.className = 'edit-btn';
-                editBtn.textContent = '✎';
-                editBtn.onclick = () => this.showEditEquipmentDialog(item);
-                
-                const pinBtn = document.createElement('button');
-                pinBtn.className = `pin-star-btn ${item.pinned ? 'pinned' : ''}`;
-                pinBtn.textContent = item.pinned ? '★' : '☆';
-                pinBtn.onclick = () => this.togglePinEquipment(item);
-                
-                itemDiv.appendChild(textDiv);
-                itemDiv.appendChild(editBtn);
-                itemDiv.appendChild(pinBtn);
-                container.appendChild(itemDiv);
-            });
-        }
-
-        updatePinnedList() {
-            const container = document.getElementById('pinned-container');
-            container.innerHTML = '';
-            
-            if (this.pinnedEquipment.length === 0) {
-                container.style.display = 'none';
-                return;
+                this.pinnedEquipment.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'pinned-item';
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'pinned-item-text';
+                    textDiv.textContent = `${item.name} - ${item.power}, ${item.channels}ch`;
+                    
+                    const unpinBtn = document.createElement('button');
+                    unpinBtn.className = 'unpin-btn';
+                    unpinBtn.textContent = '✕';
+                    unpinBtn.onclick = () => this.togglePinEquipment(item);
+                    
+                    itemDiv.appendChild(textDiv);
+                    itemDiv.appendChild(unpinBtn);
+                    container.appendChild(itemDiv);
+                });
             }
-            
-            container.style.display = 'block';
-            
-            this.pinnedEquipment.forEach(item => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'pinned-item';
-                
-                const textDiv = document.createElement('div');
-                textDiv.className = 'pinned-item-text';
-                textDiv.textContent = `${item.name} - ${item.power}, ${item.channels}ch`;
-                
-                const unpinBtn = document.createElement('button');
-                unpinBtn.className = 'unpin-btn';
-                unpinBtn.textContent = '✕';
-                unpinBtn.onclick = () => this.togglePinEquipment(item);
-                
-                itemDiv.appendChild(textDiv);
-                itemDiv.appendChild(unpinBtn);
-                container.appendChild(itemDiv);
-            });
-        }
 
-        filterEquipment(searchTerm) {
-            this.updateEquipmentList();
-        }
-
-        showAddEquipmentDialog() {
-            this.editingEquipment = null;
-            document.getElementById('dialog-title').textContent = 'Добавить прибор';
-            document.getElementById('delete-btn').style.display = 'none';
-            document.getElementById('dialog-name').value = '';
-            document.getElementById('dialog-power').value = '';
-            document.getElementById('dialog-channels').value = '';
-            document.getElementById('equipment-dialog').style.display = 'flex';
-            
-            // Фокус на первое поле
-            setTimeout(() => {
-                document.getElementById('dialog-name').focus();
-            }, 100);
-        }
-
-        showEditEquipmentDialog(item) {
-            this.editingEquipment = item;
-            document.getElementById('dialog-title').textContent = 'Редактировать прибор';
-            document.getElementById('delete-btn').style.display = item.isCustom ? 'block' : 'none';
-            document.getElementById('dialog-name').value = item.name;
-            document.getElementById('dialog-power').value = item.power;
-            document.getElementById('dialog-channels').value = item.channels;
-            document.getElementById('equipment-dialog').style.display = 'flex';
-            
-            // Фокус на первое поле
-            setTimeout(() => {
-                document.getElementById('dialog-name').focus();
-            }, 100);
-        }
-
-        closeEquipmentDialog() {
-            document.getElementById('equipment-dialog').style.display = 'none';
-        }
-
-        saveEquipment() {
-            const name = document.getElementById('dialog-name').value.trim();
-            const power = document.getElementById('dialog-power').value.trim();
-            const channels = document.getElementById('dialog-channels').value.trim();
-            
-            if (!name || !power || !channels) {
-                alert('Пожалуйста, заполните все поля');
-                return;
+            filterEquipment(searchTerm) {
+                this.updateEquipmentList();
             }
-            
-            if (this.editingEquipment) {
-                // Обновление существующего оборудования
-                this.editingEquipment.name = name;
-                this.editingEquipment.power = power;
-                this.editingEquipment.channels = channels;
-                if (!this.editingEquipment.isCustom) {
-                    this.editingEquipment.isCustom = true;
+
+            showAddEquipmentDialog() {
+                this.editingEquipment = null;
+                document.getElementById('dialog-title').textContent = 'Добавить прибор';
+                document.getElementById('delete-btn').style.display = 'none';
+                document.getElementById('dialog-name').value = '';
+                document.getElementById('dialog-power').value = '';
+                document.getElementById('dialog-channels').value = '';
+                document.getElementById('equipment-dialog').style.display = 'flex';
+                
+                // Фокус на первое поле
+                setTimeout(() => {
+                    document.getElementById('dialog-name').focus();
+                }, 100);
+            }
+
+            showEditEquipmentDialog(item) {
+                this.editingEquipment = item;
+                document.getElementById('dialog-title').textContent = 'Редактировать прибор';
+                document.getElementById('delete-btn').style.display = item.isCustom ? 'block' : 'none';
+                document.getElementById('dialog-name').value = item.name;
+                document.getElementById('dialog-power').value = item.power;
+                document.getElementById('dialog-channels').value = item.channels;
+                document.getElementById('equipment-dialog').style.display = 'flex';
+                
+                // Фокус на первое поле
+                setTimeout(() => {
+                    document.getElementById('dialog-name').focus();
+                }, 100);
+            }
+
+            closeEquipmentDialog() {
+                document.getElementById('equipment-dialog').style.display = 'none';
+            }
+
+            saveEquipment() {
+                const name = document.getElementById('dialog-name').value.trim();
+                const power = document.getElementById('dialog-power').value.trim();
+                const channels = document.getElementById('dialog-channels').value.trim();
+                
+                if (!name || !power || !channels) {
+                    alert('Пожалуйста, заполните все поля');
+                    return;
                 }
-            } else {
-                // Добавление нового оборудования
-                const newItem = new EquipmentItem(name, power, channels, false, true);
-                this.allEquipment.push(newItem);
-            }
-            
-            this.saveToStorage();
-            this.updateEquipmentList();
-            this.updatePinnedList();
-            this.closeEquipmentDialog();
-            
-            // Переоткрытие списка для обновления
-            this.toggleEquipmentList();
-            this.toggleEquipmentList();
-        }
-
-        deleteEquipment() {
-            if (!this.editingEquipment || !this.editingEquipment.isCustom) return;
-            
-            if (!confirm(`Удалить прибор "${this.editingEquipment.name}"?`)) {
-                return;
-            }
-            
-            const index = this.allEquipment.indexOf(this.editingEquipment);
-            if (index > -1) {
-                this.allEquipment.splice(index, 1);
-            }
-            
-            const pinnedIndex = this.pinnedEquipment.indexOf(this.editingEquipment);
-            if (pinnedIndex > -1) {
-                this.pinnedEquipment.splice(pinnedIndex, 1);
-            }
-            
-            this.saveToStorage();
-            this.updateEquipmentList();
-            this.updatePinnedList();
-            this.closeEquipmentDialog();
-        }
-
-        togglePinEquipment(item) {
-            item.pinned = !item.pinned;
-            
-            if (item.pinned) {
-                if (!this.pinnedEquipment.includes(item)) {
-                    this.pinnedEquipment.push(item);
+                
+                if (this.editingEquipment) {
+                    // Обновление существующего оборудования
+                    this.editingEquipment.name = name;
+                    this.editingEquipment.power = power;
+                    this.editingEquipment.channels = channels;
+                    if (!this.editingEquipment.isCustom) {
+                        this.editingEquipment.isCustom = true;
+                    }
+                } else {
+                    // Добавление нового оборудования
+                    const newItem = new EquipmentItem(name, power, channels, false, true);
+                    this.allEquipment.push(newItem);
                 }
-            } else {
-                const index = this.pinnedEquipment.indexOf(item);
+                
+                this.saveToStorage();
+                this.updateEquipmentList();
+                this.updatePinnedList();
+                this.closeEquipmentDialog();
+                
+                // Переоткрытие списка для обновления
+                this.toggleEquipmentList();
+                this.toggleEquipmentList();
+            }
+
+            deleteEquipment() {
+                if (!this.editingEquipment || !this.editingEquipment.isCustom) return;
+                
+                if (!confirm(`Удалить прибор "${this.editingEquipment.name}"?`)) {
+                    return;
+                }
+                
+                const index = this.allEquipment.indexOf(this.editingEquipment);
                 if (index > -1) {
-                    this.pinnedEquipment.splice(index, 1);
+                    this.allEquipment.splice(index, 1);
+                }
+                
+                const pinnedIndex = this.pinnedEquipment.indexOf(this.editingEquipment);
+                if (pinnedIndex > -1) {
+                    this.pinnedEquipment.splice(pinnedIndex, 1);
+                }
+                
+                this.saveToStorage();
+                this.updateEquipmentList();
+                this.updatePinnedList();
+                this.closeEquipmentDialog();
+            }
+
+            togglePinEquipment(item) {
+                item.pinned = !item.pinned;
+                
+                if (item.pinned) {
+                    if (!this.pinnedEquipment.includes(item)) {
+                        this.pinnedEquipment.push(item);
+                    }
+                } else {
+                    const index = this.pinnedEquipment.indexOf(item);
+                    if (index > -1) {
+                        this.pinnedEquipment.splice(index, 1);
+                    }
+                }
+                
+                this.saveToStorage();
+                this.updateEquipmentList();
+                this.updatePinnedList();
+            }
+
+            // Работа с локальным хранилищем
+            saveToStorage() {
+                try {
+                    // Сохранение пользовательского оборудования
+                    const customItems = this.allEquipment.filter(item => item.isCustom);
+                    const customData = customItems.map(item => item.toStorageString());
+                    localStorage.setItem('dmx_custom_equipment', JSON.stringify(customData));
+                    
+                    // Сохранение закрепленного оборудования
+                    const pinnedData = this.pinnedEquipment.map(item => item.toStorageString());
+                    localStorage.setItem('dmx_pinned_equipment', JSON.stringify(pinnedData));
+                    
+                    // Сохранение настроек
+                    const settings = {
+                        step: this.currentStep,
+                        address: this.currentAddress,
+                        pins: this.pinSelected
+                    };
+                    localStorage.setItem('dmx_settings', JSON.stringify(settings));
+                } catch (e) {
+                    console.error('Ошибка сохранения данных:', e);
+                }
+            }
+
+            loadFromStorage() {
+                try {
+                    // Загрузка пользовательского оборудования
+                    const customData = JSON.parse(localStorage.getItem('dmx_custom_equipment') || '[]');
+                    customData.forEach(storageString => {
+                        const item = EquipmentItem.fromStorageString(storageString);
+                        if (item) {
+                            this.allEquipment.push(item);
+                        }
+                    });
+                    
+                    // Загрузка закрепленного оборудования
+                    const pinnedData = JSON.parse(localStorage.getItem('dmx_pinned_equipment') || '[]');
+                    pinnedData.forEach(storageString => {
+                        const savedItem = EquipmentItem.fromStorageString(storageString);
+                        if (savedItem) {
+                            // Поиск соответствующего элемента в основном списке
+                            const existingItem = this.allEquipment.find(item => 
+                                item.name === savedItem.name &&
+                                item.power === savedItem.power &&
+                                item.channels === savedItem.channels
+                            );
+                            
+                            if (existingItem) {
+                                existingItem.pinned = true;
+                                this.pinnedEquipment.push(existingItem);
+                            } else if (savedItem.isCustom) {
+                                // Если пользовательский прибор не найден, добавляем его
+                                savedItem.pinned = true;
+                                this.allEquipment.push(savedItem);
+                                this.pinnedEquipment.push(savedItem);
+                            }
+                        }
+                    });
+                    
+                    // Загрузка настроек
+                    const settings = JSON.parse(localStorage.getItem('dmx_settings') || '{}');
+                    if (settings.step) {
+                        this.currentStep = settings.step;
+                        document.getElementById('step-input').value = settings.step;
+                    }
+                    if (settings.address) {
+                        this.currentAddress = settings.address;
+                        document.getElementById('address-input').value = settings.address;
+                    }
+                    if (settings.pins) {
+                        this.pinSelected = settings.pins;
+                    }
+                } catch (e) {
+                    console.error('Ошибка загрузки данных:', e);
+                }
+            }
+        }
+
+        // ============================================
+        // ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ HTML
+        // ============================================
+
+        function increaseAddress() {
+            if (dmxApp) dmxApp.increaseAddress();
+        }
+
+        function decreaseAddress() {
+            if (dmxApp) dmxApp.decreaseAddress();
+        }
+
+        function resetAll() {
+            if (dmxApp) dmxApp.resetAll();
+        }
+
+        function updateStepValue() {
+            if (dmxApp) dmxApp.updateStepValue();
+        }
+
+        function setPinsFromAddress() {
+            if (dmxApp) dmxApp.setPinsFromAddress();
+        }
+
+        function toggleEquipmentList() {
+            if (dmxApp) dmxApp.toggleEquipmentList();
+        }
+
+        function showAddEquipmentDialog() {
+            if (dmxApp) dmxApp.showAddEquipmentDialog();
+        }
+
+        function closeEquipmentDialog() {
+            if (dmxApp) dmxApp.closeEquipmentDialog();
+        }
+
+        function saveEquipment() {
+            if (dmxApp) dmxApp.saveEquipment();
+        }
+
+        function deleteEquipment() {
+            if (dmxApp) dmxApp.deleteEquipment();
+        }
+
+        function filterEquipment(value) {
+            if (dmxApp) dmxApp.filterEquipment(value);
+        }
+
+        function hideInstructions() {
+            document.getElementById('instructions').style.display = 'none';
+        }
+
+        // ============================================
+        // ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Показать инструкцию при первом открытии
+            if (!localStorage.getItem('dmx_first_visit')) {
+                document.getElementById('instructions').style.display = 'block';
+                localStorage.setItem('dmx_first_visit', 'true');
+            }
+            
+            // Инициализация калькулятора
+            dmxApp = new DmxCalculator();
+            
+            // Сохранять данные при закрытии страницы
+            window.addEventListener('beforeunload', () => {
+                if (dmxApp) {
+                    dmxApp.saveToStorage();
+                }
+            });
+            
+            // PWA: Регистрация Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(console.error);
+            }
+            
+            console.log('DMX Calculator initialized');
+        });
+
+        // Обработка клавиатуры для диалогов
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const dialog = document.getElementById('equipment-dialog');
+                if (dialog.style.display === 'flex') {
+                    closeEquipmentDialog();
                 }
             }
             
-            this.saveToStorage();
-            this.updateEquipmentList();
-            this.updatePinnedList();
-        }
-
-        // Работа с локальным хранилищем
-        saveToStorage() {
-            try {
-                // Сохранение пользовательского оборудования
-                const customItems = this.allEquipment.filter(item => item.isCustom);
-                const customData = customItems.map(item => item.toStorageString());
-                localStorage.setItem('dmx_custom_equipment', JSON.stringify(customData));
-                
-                // Сохранение закрепленного оборудования
-                const pinnedData = this.pinnedEquipment.map(item => item.toStorageString());
-                localStorage.setItem('dmx_pinned_equipment', JSON.stringify(pinnedData));
-                
-                // Сохранение настроек
-                const settings = {
-                    step: this.currentStep,
-                    address: this.currentAddress,
-                    pins: this.pinSelected
-                };
-                localStorage.setItem('dmx_settings', JSON.stringify(settings));
-            } catch (e) {
-                console.error('Ошибка сохранения данных:', e);
-            }
-        }
-
-        loadFromStorage() {
-            try {
-                // Загрузка пользовательского оборудования
-                const customData = JSON.parse(localStorage.getItem('dmx_custom_equipment') || '[]');
-                customData.forEach(storageString => {
-                    const item = EquipmentItem.fromStorageString(storageString);
-                    if (item) {
-                        this.allEquipment.push(item);
+            if (e.key === 'Enter' && document.getElementById('equipment-dialog').style.display === 'flex') {
+                const active = document.activeElement;
+                if (active && (active.id === 'dialog-name' || active.id === 'dialog-power' || active.id === 'dialog-channels')) {
+                    e.preventDefault();
+                    if (active.id === 'dialog-name') {
+                        document.getElementById('dialog-power').focus();
+                    } else if (active.id === 'dialog-power') {
+                        document.getElementById('dialog-channels').focus();
+                    } else if (active.id === 'dialog-channels') {
+                        saveEquipment();
                     }
-                });
-                
-                // Загрузка закрепленного оборудования
-                const pinnedData = JSON.parse(localStorage.getItem('dmx_pinned_equipment') || '[]');
-                pinnedData.forEach(storageString => {
-                    const savedItem = EquipmentItem.fromStorageString(storageString);
-                    if (savedItem) {
-                        // Поиск соответствующего элемента в основном списке
-                        const existingItem = this.allEquipment.find(item => 
-                            item.name === savedItem.name &&
-                            item.power === savedItem.power &&
-                            item.channels === savedItem.channels
-                        );
-                        
-                        if (existingItem) {
-                            existingItem.pinned = true;
-                            this.pinnedEquipment.push(existingItem);
-                        } else if (savedItem.isCustom) {
-                            // Если пользовательский прибор не найден, добавляем его
-                            savedItem.pinned = true;
-                            this.allEquipment.push(savedItem);
-                            this.pinnedEquipment.push(savedItem);
-                        }
-                    }
-                });
-                
-                // Загрузка настроек
-                const settings = JSON.parse(localStorage.getItem('dmx_settings') || '{}');
-                if (settings.step) {
-                    this.currentStep = settings.step;
-                    document.getElementById('step-input').value = settings.step;
                 }
-                if (settings.address) {
-                    this.currentAddress = settings.address;
-                    document.getElementById('address-input').value = settings.address;
-                }
-                if (settings.pins) {
-                    this.pinSelected = settings.pins;
-                }
-            } catch (e) {
-                console.error('Ошибка загрузки данных:', e);
-            }
-        }
-    }
-
-    // ============================================
-    // ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ HTML
-    // ============================================
-
-    function increaseAddress() {
-        if (dmxApp) dmxApp.increaseAddress();
-    }
-
-    function decreaseAddress() {
-        if (dmxApp) dmxApp.decreaseAddress();
-    }
-
-    function resetAll() {
-        if (dmxApp) dmxApp.resetAll();
-    }
-
-    function updateStepValue() {
-        if (dmxApp) dmxApp.updateStepValue();
-    }
-
-    function setPinsFromAddress() {
-        if (dmxApp) dmxApp.setPinsFromAddress();
-    }
-
-    function toggleEquipmentList() {
-        if (dmxApp) dmxApp.toggleEquipmentList();
-    }
-
-    function showAddEquipmentDialog() {
-        if (dmxApp) dmxApp.showAddEquipmentDialog();
-    }
-
-    function closeEquipmentDialog() {
-        if (dmxApp) dmxApp.closeEquipmentDialog();
-    }
-
-    function saveEquipment() {
-        if (dmxApp) dmxApp.saveEquipment();
-    }
-
-    function deleteEquipment() {
-        if (dmxApp) dmxApp.deleteEquipment();
-    }
-
-    function filterEquipment(value) {
-        if (dmxApp) dmxApp.filterEquipment(value);
-    }
-
-    function hideInstructions() {
-        document.getElementById('instructions').style.display = 'none';
-    }
-
-    // ============================================
-    // ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
-    // ============================================
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // Показать инструкцию при первом открытии
-        if (!localStorage.getItem('dmx_first_visit')) {
-            document.getElementById('instructions').style.display = 'block';
-            localStorage.setItem('dmx_first_visit', 'true');
-        }
-        
-        // Инициализация калькулятора
-        dmxApp = new DmxCalculator();
-        
-        // Сохранять данные при закрытии страницы
-        window.addEventListener('beforeunload', () => {
-            if (dmxApp) {
-                dmxApp.saveToStorage();
             }
         });
-        
-        // PWA: Регистрация Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(console.error);
-        }
-        
-        console.log('DMX Calculator initialized');
-    });
-
-    // Обработка клавиатуры для диалогов
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            const dialog = document.getElementById('equipment-dialog');
-            if (dialog.style.display === 'flex') {
-                closeEquipmentDialog();
-            }
-        }
-        
-        if (e.key === 'Enter' && document.getElementById('equipment-dialog').style.display === 'flex') {
-            const active = document.activeElement;
-            if (active && (active.id === 'dialog-name' || active.id === 'dialog-power' || active.id === 'dialog-channels')) {
-                e.preventDefault();
-                if (active.id === 'dialog-name') {
-                    document.getElementById('dialog-power').focus();
-                } else if (active.id === 'dialog-power') {
-                    document.getElementById('dialog-channels').focus();
-                } else if (active.id === 'dialog-channels') {
-                    saveEquipment();
-                }
-            }
-        }
-    });
-</script>
+    </script>
 </body>
 </html>
