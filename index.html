@@ -937,12 +937,25 @@
             }
 
             togglePin(index) {
+                // Переключаем состояние пина
                 this.pinSelected[index] = !this.pinSelected[index];
-                this.updateResult();
+                
+                // Теперь пересчитываем адрес на основе выбранных пинов
+                let newAddress = 0;
+                for (let i = 0; i < 9; i++) {
+                    if (this.pinSelected[i]) {
+                        newAddress += Math.pow(2, i);
+                    }
+                }
+                
+                // Если адрес 0, ставим 1 (минимальный DMX адрес)
+                this.currentAddress = newAddress === 0 ? 1 : newAddress;
+                
+                // Обновляем интерфейс
+                this.updateUI();
             }
 
             updateResult() {
-                // ВАЖНО: используем текущий адрес, а не вычисляем из пинов
                 const addr = this.currentAddress;
                 
                 console.log('updateResult: обновляем отображение для адреса', addr);
@@ -959,23 +972,11 @@
                     addressInput.value = addr;
                 }
 
-                // Обновление кнопок пинов на основе текущего адреса
-                // Сначала сбрасываем все пины
-                for (let i = 0; i < 9; i++) {
-                    this.pinSelected[i] = false;
-                }
-                
-                // Затем устанавливаем пины на основе адреса
-                for (let i = 0; i < 9; i++) {
-                    const bit = Math.pow(2, i);
-                    if ((addr & bit) !== 0) {
-                        this.pinSelected[i] = true;
-                    }
-                }
-
-                // Обновление визуального состояния кнопок пинов
+                // Обновляем визуальное состояние пинов на основе текущего адреса
                 const pinButtons = document.querySelectorAll('.pin-btn');
                 pinButtons.forEach((btn, i) => {
+                    const bit = Math.pow(2, i);
+                    this.pinSelected[i] = (addr & bit) !== 0;
                     btn.classList.toggle('selected', this.pinSelected[i]);
                 });
 
