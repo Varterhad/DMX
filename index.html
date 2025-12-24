@@ -859,8 +859,14 @@
                 document.getElementById('minus-btn').addEventListener('click', () => this.decreaseAddress());
 
                 // Обработчики для полей ввода
-                document.getElementById('step-input').addEventListener('input', () => this.updateStepValue());
-                document.getElementById('address-input').addEventListener('input', () => this.setPinsFromAddress());
+                document.getElementById('step-input').addEventListener('change', (e) => {
+                    this.updateStepValue(e.target.value);
+                    this.updateSurroundingAddresses();
+                });
+                
+                document.getElementById('address-input').addEventListener('change', (e) => {
+                    this.setPinsFromAddress(e.target.value);
+                });
 
                 // Обработчик для поиска
                 document.getElementById('equipment-search').addEventListener('input', (e) => this.filterEquipment(e.target.value));
@@ -871,46 +877,38 @@
             }
 
             normalizeAddress(address) {
-                let normalized = ((address - 1) % this.DMX_TOTAL_CHANNELS);
-                if (normalized < 0) {
-                    normalized += this.DMX_TOTAL_CHANNELS;
+                if (address < 1) {
+                    address = this.DMX_TOTAL_CHANNELS - (Math.abs(address) % this.DMX_TOTAL_CHANNELS);
                 }
+                let normalized = ((address - 1) % this.DMX_TOTAL_CHANNELS);
                 return normalized + 1;
             }
 
-            getNextAddress(current, step) {
-                return this.normalizeAddress(current + step);
-            }
-
-            getPrevAddress(current, step) {
-                return this.normalizeAddress(current - step);
-            }
-
             increaseAddress() {
-                this.currentAddress = this.getNextAddress(this.currentAddress, this.currentStep);
+                this.currentAddress = this.normalizeAddress(this.currentAddress + this.currentStep);
                 this.updateUI();
+                console.log('Increase address to:', this.currentAddress, 'step:', this.currentStep);
             }
 
             decreaseAddress() {
-                this.currentAddress = this.getPrevAddress(this.currentAddress, this.currentStep);
+                this.currentAddress = this.normalizeAddress(this.currentAddress - this.currentStep);
                 this.updateUI();
+                console.log('Decrease address to:', this.currentAddress, 'step:', this.currentStep);
             }
 
-            updateStepValue() {
-                const stepInput = document.getElementById('step-input');
-                let step = parseInt(stepInput.value) || 1;
+            updateStepValue(value) {
+                let step = parseInt(value) || 1;
                 
                 if (step < 1) {
                     step = 1;
-                    stepInput.value = "1";
                 } else if (step > 512) {
                     step = step % this.DMX_TOTAL_CHANNELS;
                     if (step === 0) step = this.DMX_TOTAL_CHANNELS;
-                    stepInput.value = step.toString();
                 }
                 
                 this.currentStep = step;
-                this.updateSurroundingAddresses();
+                document.getElementById('step-input').value = step;
+                console.log('Step updated to:', step);
             }
 
             togglePin(index) {
@@ -954,13 +952,12 @@
                 this.updateSurroundingAddresses();
             }
 
-            setPinsFromAddress() {
-                const addressInput = document.getElementById('address-input');
-                let addr = parseInt(addressInput.value) || 1;
+            setPinsFromAddress(value) {
+                let addr = parseInt(value) || 1;
                 
                 addr = this.normalizeAddress(addr);
                 this.currentAddress = addr;
-                addressInput.value = addr;
+                document.getElementById('address-input').value = addr;
                 document.getElementById('address-display').textContent = addr;
 
                 // Сброс пинов
@@ -987,7 +984,7 @@
                 // Предыдущие адреса
                 for (let i = 0; i < 3; i++) {
                     const stepsBack = (3 - i) * this.currentStep;
-                    const prevAddress = this.getPrevAddress(this.currentAddress, stepsBack);
+                    const prevAddress = this.normalizeAddress(this.currentAddress - stepsBack);
                     const span = document.createElement('span');
                     span.textContent = prevAddress;
                     prevContainer.appendChild(span);
@@ -996,7 +993,7 @@
                 // Следующие адреса
                 for (let i = 0; i < 3; i++) {
                     const stepsForward = (i + 1) * this.currentStep;
-                    const nextAddress = this.getNextAddress(this.currentAddress, stepsForward);
+                    const nextAddress = this.normalizeAddress(this.currentAddress + stepsForward);
                     const span = document.createElement('span');
                     span.textContent = nextAddress;
                     nextContainer.appendChild(span);
@@ -1280,9 +1277,11 @@
                     if (settings.address) {
                         this.currentAddress = settings.address;
                         document.getElementById('address-input').value = settings.address;
+                        this.setPinsFromAddress(settings.address);
                     }
                     if (settings.pins) {
                         this.pinSelected = settings.pins;
+                        this.updateResult();
                     }
                 } catch (e) {
                     console.error('Ошибка загрузки данных:', e);
@@ -1307,11 +1306,13 @@
         }
 
         function updateStepValue() {
-            if (dmxApp) dmxApp.updateStepValue();
+            const value = document.getElementById('step-input').value;
+            if (dmxApp) dmxApp.updateStepValue(value);
         }
 
         function setPinsFromAddress() {
-            if (dmxApp) dmxApp.setPinsFromAddress();
+            const value = document.getElementById('address-input').value;
+            if (dmxApp) dmxApp.setPinsFromAddress(value);
         }
 
         function toggleEquipmentList() {
