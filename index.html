@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DMX Калькулятор</title>
     
-    <!-- PWA настройки для всех платформ -->
+    <!-- PWA настройки -->
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DMX Калькулятор">
-    
-    <!-- Android Chrome fullscreen fix -->
-    <meta name="theme-color" media="(display-mode: standalone)" content="#000000">
     
     <style>
         * {
@@ -35,14 +32,14 @@
             -webkit-touch-callout: none;
             height: 100%;
             width: 100%;
-            position: fixed; /* Важно для Android Chrome */
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
         }
         
-        /* Полноэкранный режим для всех браузеров */
+        /* Полноэкранный режим */
         @media (display-mode: standalone), (display-mode: fullscreen) {
             body {
                 padding-top: env(safe-area-inset-top);
@@ -53,11 +50,6 @@
                 padding-top: calc(8px + env(safe-area-inset-top));
                 height: calc(52px + env(safe-area-inset-top));
             }
-        }
-        
-        /* Скрываем элементы браузера при установке */
-        .standalone-mode {
-            padding-top: env(safe-area-inset-top) !important;
         }
         
         button {
@@ -91,7 +83,6 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            transition: padding-top 0.3s;
         }
         
         .equipment-toggle {
@@ -625,61 +616,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
-        
-        /* Индикатор установки (только при первом посещении) */
-        .install-prompt {
-            display: none;
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.95);
-            border: 2px solid #4CAF50;
-            border-radius: 12px;
-            padding: 15px;
-            z-index: 9999;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-        
-        .install-prompt h3 {
-            color: #4CAF50;
-            margin-bottom: 10px;
-            font-size: 18px;
-        }
-        
-        .install-prompt p {
-            color: white;
-            margin-bottom: 15px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        
-        .install-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        
-        .install-btn {
-            padding: 8px 20px;
-            border-radius: 6px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .install-primary {
-            background-color: #4CAF50;
-            color: white;
-        }
-        
-        .install-secondary {
-            background-color: #666;
-            color: white;
-        }
     </style>
 </head>
 <body>
@@ -690,16 +626,6 @@
             <button class="equipment-toggle" onclick="toggleEquipmentList()">
                 ОБОРУДОВАНИЕ ▼
             </button>
-            <button class="install-info-btn" onclick="showInstallPrompt()" style="
-                background: none;
-                border: none;
-                color: #4CAF50;
-                font-size: 20px;
-                padding: 0 15px;
-                cursor: pointer;
-                margin-left: 10px;
-                display: none;
-            ">📱</button>
         </div>
 
         <!-- Закрепленное оборудование -->
@@ -789,23 +715,12 @@
         </div>
     </div>
 
-    <!-- Всплывающее окно установки -->
-    <div id="install-prompt" class="install-prompt">
-        <h3>📱 Установить DMX Калькулятор</h3>
-        <p>Для полноэкранного режима без адресной строки установите приложение:</p>
-        <div class="install-buttons">
-            <button class="install-btn install-primary" onclick="handleInstall()">Установить</button>
-            <button class="install-btn install-secondary" onclick="hideInstallPrompt()">Позже</button>
-        </div>
-    </div>
-
     <!-- Загрузчик -->
     <div id="loader" class="loader">Загрузка...</div>
 
     <script>
         // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
         let dmxApp = null;
-        let deferredPrompt = null;
         let lastClickTime = 0;
         const CLICK_DELAY = 300;
 
@@ -880,31 +795,27 @@
                 this.initializeUI();
                 this.updateUI();
                 
-                // Применяем полноэкранные стили
-                this.applyFullscreenStyles();
+                // Инициализация полноэкранного режима
+                this.initFullscreen();
             }
 
-            applyFullscreenStyles() {
-                // Проверяем, установлено ли приложение
-                if (this.isInStandaloneMode()) {
-                    document.body.classList.add('standalone-mode');
-                    console.log('Приложение работает в полноэкранном режиме');
-                } else {
-                    console.log('Приложение работает в браузере');
+            initFullscreen() {
+                // Автоматически скрываем адресную строку на мобильных устройствах
+                if (this.isMobileDevice()) {
+                    setTimeout(() => {
+                        window.scrollTo(0, 1);
+                    }, 100);
                     
-                    // Показываем кнопку установки
-                    const installBtn = document.querySelector('.install-info-btn');
-                    if (installBtn) {
-                        installBtn.style.display = 'block';
-                    }
+                    window.addEventListener('scroll', () => {
+                        setTimeout(() => {
+                            window.scrollTo(0, 1);
+                        }, 10);
+                    });
                 }
             }
 
-            isInStandaloneMode() {
-                return window.matchMedia('(display-mode: standalone)').matches || 
-                       window.matchMedia('(display-mode: fullscreen)').matches ||
-                       window.navigator.standalone === true ||
-                       document.referrer.includes('android-app://');
+            isMobileDevice() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             }
 
             initializeEquipment() {
@@ -1521,91 +1432,16 @@
             if (dmxApp) dmxApp.filterEquipment(value);
         }
 
-        // Функции для установки PWA
-        function showInstallPrompt() {
-            const prompt = document.getElementById('install-prompt');
-            prompt.style.display = 'block';
-        }
-
-        function hideInstallPrompt() {
-            const prompt = document.getElementById('install-prompt');
-            prompt.style.display = 'none';
-        }
-
-        function handleInstall() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('Пользователь установил приложение');
-                        hideInstallPrompt();
-                    } else {
-                        console.log('Пользователь отказался от установки');
-                    }
-                    deferredPrompt = null;
-                });
-            } else {
-                // Руководство по установке
-                const isAndroid = /Android/.test(navigator.userAgent);
-                const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-                
-                let message = '';
-                if (isAndroid) {
-                    message = 'В Chrome: меню (3 точки) → "Добавить на главный экран"';
-                } else if (isIOS) {
-                    message = 'В Safari: кнопка "Поделиться" → "На экран «Домой»"';
-                } else {
-                    message = 'В меню браузера выберите "Установить приложение"';
-                }
-                
-                alert(message);
-                hideInstallPrompt();
-            }
-        }
-
         // ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
         document.addEventListener('DOMContentLoaded', () => {
             // Инициализация калькулятора
             dmxApp = new DmxCalculator();
-            
-            // Обработчик установки PWA
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                
-                // Показываем подсказку об установке при первом посещении
-                if (!localStorage.getItem('dmx_install_shown')) {
-                    setTimeout(() => {
-                        showInstallPrompt();
-                        localStorage.setItem('dmx_install_shown', 'true');
-                    }, 3000);
-                }
-            });
-            
-            // Проверяем, запущено ли приложение в standalone режиме
-            window.addEventListener('load', () => {
-                if (dmxApp.isInStandaloneMode()) {
-                    console.log('Приложение запущено в полноэкранном режиме');
-                }
-            });
             
             // Сохранять данные при закрытии страницы
             window.addEventListener('beforeunload', () => {
                 if (dmxApp) {
                     dmxApp.saveToStorage();
                 }
-            });
-            
-            // Скрываем адресную строку на Android Chrome
-            setTimeout(() => {
-                window.scrollTo(0, 1);
-            }, 100);
-            
-            // Прячем адресную строку при прокрутке
-            window.addEventListener('scroll', () => {
-                setTimeout(() => {
-                    window.scrollTo(0, 1);
-                }, 10);
             });
         });
 
@@ -1616,7 +1452,6 @@
                 if (dialog.style.display === 'flex') {
                     closeEquipmentDialog();
                 }
-                hideInstallPrompt();
             }
             
             if (e.key === 'Enter' && document.getElementById('equipment-dialog').style.display === 'flex') {
@@ -1632,15 +1467,6 @@
                     }
                 }
             }
-        });
-
-        // Принудительно скрываем адресную строку на мобильных устройствах
-        window.addEventListener('resize', () => {
-            setTimeout(() => {
-                if (window.innerHeight < window.outerHeight) {
-                    window.scrollTo(0, 1);
-                }
-            }, 100);
         });
     </script>
 </body>
