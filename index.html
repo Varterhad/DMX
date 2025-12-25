@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DMX Калькулятор</title>
     
     <!-- PWA настройки -->
@@ -11,12 +11,35 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="DMX Calc">
     
+    <!-- Apple специфичные мета-теги -->
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
+            /* Для iOS - предотвращаем выделение и зум */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            /* Разрешаем только вертикальный скролл */
+            touch-action: pan-y;
+        }
+        
+        /* Разрешаем выделение в полях ввода */
+        input, textarea {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+            /* Для полей ввода разрешаем зум */
+            touch-action: auto;
         }
         
         body {
@@ -27,6 +50,24 @@
             -webkit-text-size-adjust: 100%;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            /* Для iOS - предотвращаем bounce эффект */
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Контейнер для контента с прокруткой */
+        .content-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         button {
@@ -35,10 +76,15 @@
             outline: none;
             border: none;
             -webkit-tap-highlight-color: rgba(0,0,0,0);
+            /* Для iOS кнопок */
+            -webkit-appearance: none;
+            border-radius: 0;
         }
         
         input {
             font-family: inherit;
+            -webkit-appearance: none;
+            border-radius: 0;
         }
         
         /* ОСНОВНОЙ КОНТЕЙНЕР */
@@ -309,6 +355,7 @@
             z-index: 1000;
             overflow-y: auto;
             display: none;
+            -webkit-overflow-scrolling: touch;
         }
         
         .equipment-panel-header {
@@ -595,92 +642,95 @@
     </style>
 </head>
 <body>
-    <!-- ИНСТРУКЦИЯ ДЛЯ ПОЛЬЗОВАТЕЛЯ (скрыта в приложении) -->
-    <div id="instructions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; color: white; padding: 20px; z-index: 9999; overflow-y: auto;">
-        <h2>📱 Установка приложения:</h2>
-        <p>Для установки на iPhone:</p>
-        <p>1. Нажмите кнопку "Поделиться" (квадрат со стрелкой)</p>
-        <p>2. Выберите "На экран «Домой»"</p>
-        <p>3. Нажмите "Добавить"</p>
-        <p>Приложение появится на рабочем столе.</p>
-        <button onclick="hideInstructions()" style="margin-top: 20px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px;">Понятно</button>
-    </div>
-
-    <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
-    <div class="app-container">
-        <!-- Панель оборудования -->
-        <div class="equipment-header">
-            <button class="equipment-toggle" onclick="toggleEquipmentList()">
-                ОБОРУДОВАНИЕ ▼
-            </button>
+    <!-- Контейнер для контента с прокруткой -->
+    <div class="content-wrapper">
+        <!-- ИНСТРУКЦИЯ ДЛЯ ПОЛЬЗОВАТЕЛЯ (скрыта в приложении) -->
+        <div id="instructions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; color: white; padding: 20px; z-index: 9999; overflow-y: auto;">
+            <h2>📱 Установка приложения:</h2>
+            <p>Для установки на iPhone:</p>
+            <p>1. Нажмите кнопку "Поделиться" (квадрат со стрелкой)</p>
+            <p>2. Выберите "На экран «Домой»"</p>
+            <p>3. Нажмите "Добавить"</p>
+            <p>Приложение появится на рабочем столе.</p>
+            <button onclick="hideInstructions()" style="margin-top: 20px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px;">Понятно</button>
         </div>
 
-        <!-- Закрепленное оборудование -->
-        <div id="pinned-container" class="pinned-container"></div>
-
-        <!-- Отображение адреса -->
-        <div class="address-section">
-            <div class="address-controls">
-                <button class="round-btn minus-btn" onclick="decreaseAddress()">-</button>
-                <div id="address-display" class="address-display">1</div>
-                <button class="round-btn plus-btn" onclick="increaseAddress()">+</button>
-            </div>
-
-            <div class="surrounding-addresses">
-                <div class="address-group" id="prev-addresses"></div>
-                <div class="arrows">
-                    <span class="arrow">←</span>
-                    <div class="empty-space"></div>
-                    <span class="arrow">→</span>
-                </div>
-                <div class="address-group" id="next-addresses"></div>
-            </div>
-        </div>
-
-        <!-- Ввод шага и адреса -->
-        <div class="input-section">
-            <div class="input-row">
-                <span class="input-label">ШАГ:</span>
-                <input type="number" id="step-input" class="number-input" value="1" min="1" max="512" onchange="updateStepValue()">
-            </div>
-            <div class="input-row">
-                <span class="input-label">АДРЕС:</span>
-                <input type="number" id="address-input" class="number-input" value="1" min="1" max="512" onchange="setPinsFromAddress()">
-            </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <!-- Кнопки пинов -->
-        <div class="pins-section">
-            <div class="pins-grid" id="pins-container"></div>
-        </div>
-
-        <!-- Результат -->
-        <div id="result-text" class="result-text">
-            Адрес: 1<br>Пины: нет
-        </div>
-
-        <!-- Кнопка сброса -->
-        <button class="reset-btn" onclick="resetAll()">СБРОСИТЬ ВСЕ</button>
-
-        <!-- Панель оборудования (скрытая) -->
-        <div id="equipment-panel" class="equipment-panel">
-            <div class="equipment-panel-header">
-                <button class="close-btn" onclick="toggleEquipmentList()">
-                    ✕ ЗАКРЫТЬ
+        <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+        <div class="app-container">
+            <!-- Панель оборудования -->
+            <div class="equipment-header">
+                <button class="equipment-toggle" onclick="toggleEquipmentList()">
+                    ОБОРУДОВАНИЕ ▼
                 </button>
             </div>
 
-            <input type="text" id="equipment-search" class="search-input" 
-                   placeholder="Поиск оборудования..." oninput="filterEquipment(this.value)">
+            <!-- Закрепленное оборудование -->
+            <div id="pinned-container" class="pinned-container"></div>
 
-            <button class="add-equipment-btn" onclick="showAddEquipmentDialog()">
-                + ДОБАВИТЬ ПРИБОР
-            </button>
+            <!-- Отображение адреса -->
+            <div class="address-section">
+                <div class="address-controls">
+                    <button class="round-btn minus-btn" onclick="decreaseAddress()">-</button>
+                    <div id="address-display" class="address-display">1</div>
+                    <button class="round-btn plus-btn" onclick="increaseAddress()">+</button>
+                </div>
 
-            <div class="equipment-list-container" id="equipment-list-container">
-                <!-- Список оборудования будет здесь -->
+                <div class="surrounding-addresses">
+                    <div class="address-group" id="prev-addresses"></div>
+                    <div class="arrows">
+                        <span class="arrow">←</span>
+                        <div class="empty-space"></div>
+                        <span class="arrow">→</span>
+                    </div>
+                    <div class="address-group" id="next-addresses"></div>
+                </div>
+            </div>
+
+            <!-- Ввод шага и адреса -->
+            <div class="input-section">
+                <div class="input-row">
+                    <span class="input-label">ШАГ:</span>
+                    <input type="number" id="step-input" class="number-input" value="1" min="1" max="512" onchange="updateStepValue()">
+                </div>
+                <div class="input-row">
+                    <span class="input-label">АДРЕС:</span>
+                    <input type="number" id="address-input" class="number-input" value="1" min="1" max="512" onchange="setPinsFromAddress()">
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Кнопки пинов -->
+            <div class="pins-section">
+                <div class="pins-grid" id="pins-container"></div>
+            </div>
+
+            <!-- Результат -->
+            <div id="result-text" class="result-text">
+                Адрес: 1<br>Пины: нет
+            </div>
+
+            <!-- Кнопка сброса -->
+            <button class="reset-btn" onclick="resetAll()">СБРОСИТЬ ВСЕ</button>
+
+            <!-- Панель оборудования (скрытая) -->
+            <div id="equipment-panel" class="equipment-panel">
+                <div class="equipment-panel-header">
+                    <button class="close-btn" onclick="toggleEquipmentList()">
+                        ✕ ЗАКРЫТЬ
+                    </button>
+                </div>
+
+                <input type="text" id="equipment-search" class="search-input" 
+                       placeholder="Поиск оборудования..." oninput="filterEquipment(this.value)">
+
+                <button class="add-equipment-btn" onclick="showAddEquipmentDialog()">
+                    + ДОБАВИТЬ ПРИБОР
+                </button>
+
+                <div class="equipment-list-container" id="equipment-list-container">
+                    <!-- Список оборудования будет здесь -->
+                </div>
             </div>
         </div>
     </div>
@@ -710,23 +760,46 @@
         let dmxApp = null;
 
         // ============================================
-        // ПРОСТОЙ СПОСОБ ПРЕДОТВРАЩЕНИЯ ДВОЙНОГО ТАПА
+        // СПЕЦИФИЧНЫЕ ДЛЯ iOS РЕШЕНИЯ
         // ============================================
         
-        // Только предотвращаем масштабирование при двойном тапе
+        // 1. Предотвращаем зум при двойном тапе
         document.addEventListener('touchstart', function(event) {
+            // Разрешаем зум только в полях ввода
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // Для iOS нужно предотвратить двойной тап
             if (event.touches.length > 1) {
                 event.preventDefault();
             }
         }, { passive: false });
         
+        // 2. Предотвращаем контекстное меню на iOS
+        document.addEventListener('contextmenu', function(event) {
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+                event.preventDefault();
+                return false;
+            }
+        });
+        
+        // 3. Дополнительная защита для iOS
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function(event) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
+            const now = Date.now();
+            if (now - lastTouchEnd < 500) {
                 event.preventDefault();
             }
             lastTouchEnd = now;
+        }, { passive: false });
+        
+        // 4. Предотвращаем bounce эффект на iOS
+        document.addEventListener('touchmove', function(event) {
+            // Только если не скроллим в поле ввода
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+                event.preventDefault();
+            }
         }, { passive: false });
 
         // ============================================
@@ -946,7 +1019,11 @@
                     button.className = 'pin-btn';
                     button.textContent = (i + 1).toString();
                     button.dataset.index = i;
-                    button.addEventListener('click', () => this.togglePin(i));
+                    // Используем touchstart для лучшей поддержки мобильных
+                    button.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.togglePin(i);
+                    });
                     pinsContainer.appendChild(button);
                 }
 
@@ -1161,12 +1238,18 @@
                     const editBtn = document.createElement('button');
                     editBtn.className = 'edit-btn';
                     editBtn.textContent = '✎';
-                    editBtn.onclick = () => this.showEditEquipmentDialog(item);
+                    editBtn.onclick = (e) => {
+                        e.preventDefault();
+                        this.showEditEquipmentDialog(item);
+                    };
                     
                     const pinBtn = document.createElement('button');
                     pinBtn.className = `pin-star-btn ${item.pinned ? 'pinned' : ''}`;
                     pinBtn.textContent = item.pinned ? '★' : '☆';
-                    pinBtn.onclick = () => this.togglePinEquipment(item);
+                    pinBtn.onclick = (e) => {
+                        e.preventDefault();
+                        this.togglePinEquipment(item);
+                    };
                     
                     itemDiv.appendChild(textDiv);
                     itemDiv.appendChild(editBtn);
@@ -1197,7 +1280,10 @@
                     const unpinBtn = document.createElement('button');
                     unpinBtn.className = 'unpin-btn';
                     unpinBtn.textContent = '✕';
-                    unpinBtn.onclick = () => this.togglePinEquipment(item);
+                    unpinBtn.onclick = (e) => {
+                        e.preventDefault();
+                        this.togglePinEquipment(item);
+                    };
                     
                     itemDiv.appendChild(textDiv);
                     itemDiv.appendChild(unpinBtn);
