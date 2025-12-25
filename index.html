@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>DMX Калькулятор</title>
     
-    <!-- PWA настройки -->
+    <!-- PWA настройки для всех платформ -->
     <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="DMX Calc">
+    <meta name="apple-mobile-web-app-title" content="DMX Калькулятор">
     
     <style>
         * {
@@ -19,7 +20,7 @@
             -webkit-tap-highlight-color: rgba(0,0,0,0);
         }
         
-        body {
+        html, body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: #000000;
             color: #ffffff;
@@ -27,6 +28,16 @@
             -webkit-text-size-adjust: 100%;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            overscroll-behavior: none;
+            -webkit-touch-callout: none;
+            height: 100%;
+        }
+        
+        @media (display-mode: fullscreen) {
+            .app-container {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
         }
         
         button {
@@ -482,7 +493,68 @@
             color: white;
         }
         
-        /* АДАПТИВНОСТЬ ДЛЯ IPHONE */
+        /* ИНСТРУКЦИЯ */
+        .instructions {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            color: white;
+            padding: 30px 20px 20px 20px;
+            z-index: 9999;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .instructions h2 {
+            color: #4CAF50;
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        .instructions h3 {
+            color: #FF9800;
+            margin: 25px 0 15px 0;
+            font-size: 20px;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 12px;
+        }
+        
+        .instructions p {
+            margin-bottom: 15px;
+        }
+        
+        .instructions .highlight {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .close-instructions-btn {
+            display: block;
+            margin: 25px auto 0 auto;
+            padding: 12px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        /* АДАПТИВНОСТЬ */
         @media (max-width: 768px) {
             .pins-grid {
                 display: flex;
@@ -530,7 +602,6 @@
             }
         }
         
-        /* Для очень узких экранов */
         @media (max-width: 350px) {
             .pin-btn {
                 height: 65px;
@@ -596,15 +667,35 @@
     </style>
 </head>
 <body>
-    <!-- ИНСТРУКЦИЯ ДЛЯ ПОЛЬЗОВАТЕЛЯ (скрыта в приложении) -->
-    <div id="instructions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; color: white; padding: 20px; z-index: 9999; overflow-y: auto;">
-        <h2>📱 Установка приложения:</h2>
-        <p>Для установки на iPhone:</p>
-        <p>1. Нажмите кнопку "Поделиться" (квадрат со стрелкой)</p>
-        <p>2. Выберите "На экран «Домой»"</p>
-        <p>3. Нажмите "Добавить"</p>
-        <p>Приложение появится на рабочем столе.</p>
-        <button onclick="hideInstructions()" style="margin-top: 20px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px;">Понятно</button>
+    <!-- ОБНОВЛЕННАЯ ИНСТРУКЦИЯ -->
+    <div id="instructions" class="instructions">
+        <h2>📱 Установка DMX Калькулятора</h2>
+        
+        <h3>Для Android:</h3>
+        <ol>
+            <li>Откройте меню браузера (три точки в правом верхнем углу)</li>
+            <li>Выберите <span class="highlight">"Добавить на главный экран"</span> или <span class="highlight">"Установить приложение"</span></li>
+            <li>Подтвердите установку - приложение появится на рабочем столе</li>
+            <li>Для полноэкранного режима: откройте приложение → меню → <span class="highlight">"Добавить на главный экран"</span></li>
+        </ol>
+        
+        <h3>Для iPhone/iPad:</h3>
+        <ol>
+            <li>Нажмите кнопку <span class="highlight">"Поделиться"</span> (квадрат со стрелкой вверх)</li>
+            <li>Пролистайте вниз и выберите <span class="highlight">"На экран «Домой»"</span></li>
+            <li>Нажмите <span class="highlight">"Добавить"</span> в правом верхнем углу</li>
+            <li>Приложение появится на рабочем столе как нативное</li>
+        </ol>
+        
+        <h3>Для компьютеров:</h3>
+        <ol>
+            <li>В браузере Chrome/Edge: нажмите <span class="highlight">"Установить DMX Калькулятор"</span> в адресной строке</li>
+            <li>В других браузерах: просто добавьте страницу в закладки</li>
+        </ol>
+        
+        <p><strong>Примечание:</strong> После установки приложение работает <span class="highlight">офлайн</span> и сохраняет все ваши настройки!</p>
+        
+        <button class="close-instructions-btn" onclick="hideInstructions()">Начать использовать</button>
     </div>
 
     <!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
@@ -712,12 +803,9 @@
         
         // Система для предотвращения быстрых повторных кликов
         let lastClickTime = 0;
-        const CLICK_DELAY = 300; // 300ms задержка между кликами
+        const CLICK_DELAY = 300;
 
-        // ============================================
-        // ФУНКЦИЯ ДЛЯ ПРЕДОТВРАЩЕНИЯ БЫСТРЫХ ПОВТОРНЫХ КЛИКОВ
-        // ============================================
-        
+        // Функция для предотвращения быстрых повторных кликов
         function throttleClick(callback) {
             const now = Date.now();
             if (now - lastClickTime > CLICK_DELAY) {
@@ -727,10 +815,7 @@
             return false;
         }
 
-        // ============================================
-        // КЛАСС DMX КАЛЬКУЛЯТОРА С ЗАДЕРЖКОЙ КЛИКОВ
-        // ============================================
-        
+        // КЛАСС DMX КАЛЬКУЛЯТОРА
         class EquipmentItem {
             constructor(name, power, channels, pinned = false, isCustom = false) {
                 this.name = name;
@@ -778,24 +863,44 @@
 
         class DmxCalculator {
             constructor() {
-                // DMX константы
                 this.DMX_TOTAL_CHANNELS = 512;
-                
-                // Текущие значения
                 this.currentStep = 1;
                 this.currentAddress = 1;
                 this.pinSelected = Array(9).fill(false);
-                
-                // Оборудование
                 this.allEquipment = [];
                 this.pinnedEquipment = [];
                 this.editingEquipment = null;
                 
-                // Инициализация
                 this.initializeEquipment();
                 this.loadFromStorage();
                 this.initializeUI();
                 this.updateUI();
+                
+                // Автоматически запрашиваем полноэкранный режим на мобильных устройствах
+                this.requestFullscreenOnMobile();
+            }
+
+            requestFullscreenOnMobile() {
+                // Определяем, является ли устройство мобильным
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                if (isMobile && !this.isInStandaloneMode()) {
+                    // Показываем инструкцию для установки
+                    if (!localStorage.getItem('dmx_install_prompt_shown')) {
+                        setTimeout(() => {
+                            if (confirm('Для лучшего опыта, установите DMX Калькулятор на главный экран для полноэкранного режима. Открыть инструкцию?')) {
+                                showInstructions();
+                            }
+                            localStorage.setItem('dmx_install_prompt_shown', 'true');
+                        }, 2000);
+                    }
+                }
+            }
+
+            isInStandaloneMode() {
+                return window.matchMedia('(display-mode: standalone)').matches || 
+                       window.navigator.standalone === true ||
+                       document.referrer.includes('android-app://');
             }
 
             initializeEquipment() {
@@ -937,19 +1042,16 @@
             }
 
             initializeUI() {
-                // Создание кнопок пинов с защитой от быстрых кликов
                 const pinsContainer = document.getElementById('pins-container');
                 for (let i = 0; i < 9; i++) {
                     const button = document.createElement('button');
                     button.className = 'pin-btn';
                     button.textContent = (i + 1).toString();
                     button.dataset.index = i;
-                    // Используем throttled функцию
                     button.onclick = () => throttleClick(() => this.togglePin(i));
                     pinsContainer.appendChild(button);
                 }
 
-                // Отображение начальных адресов
                 this.updateSurroundingAddresses();
                 this.updateEquipmentList();
                 this.updatePinnedList();
@@ -996,10 +1098,8 @@
             }
 
             togglePin(index) {
-                // Переключаем состояние пина
                 this.pinSelected[index] = !this.pinSelected[index];
                 
-                // Теперь пересчитываем адрес на основе выбранных пинов
                 let newAddress = 0;
                 for (let i = 0; i < 9; i++) {
                     if (this.pinSelected[i]) {
@@ -1007,17 +1107,12 @@
                     }
                 }
                 
-                // Если адрес 0, ставим 1 (минимальный DMX адрес)
                 this.currentAddress = newAddress === 0 ? 1 : newAddress;
-                
-                // Обновляем интерфейс
                 this.updateUI();
             }
 
             updateResult() {
                 const addr = this.currentAddress;
-
-                // Обновление интерфейса
                 const addressDisplay = document.getElementById('address-display');
                 const addressInput = document.getElementById('address-input');
                 
@@ -1029,7 +1124,6 @@
                     addressInput.value = addr;
                 }
 
-                // Обновляем визуальное состояние пинов на основе текущего адреса
                 const pinButtons = document.querySelectorAll('.pin-btn');
                 pinButtons.forEach((btn, i) => {
                     const bit = Math.pow(2, i);
@@ -1037,7 +1131,6 @@
                     btn.classList.toggle('selected', this.pinSelected[i]);
                 });
 
-                // Формирование текста пинов
                 let pinsText = "Пины: ";
                 const selectedPins = [];
                 for (let i = 0; i < 9; i++) {
@@ -1063,7 +1156,6 @@
                 addr = this.normalizeAddress(addr);
                 this.currentAddress = addr;
                 
-                // Обновляем отображение
                 this.updateUI();
             }
 
@@ -1074,7 +1166,6 @@
                 prevContainer.innerHTML = '';
                 nextContainer.innerHTML = '';
 
-                // Предыдущие адреса
                 for (let i = 0; i < 3; i++) {
                     const stepsBack = (3 - i) * this.currentStep;
                     const prevAddress = this.getPrevAddress(this.currentAddress, stepsBack);
@@ -1083,7 +1174,6 @@
                     prevContainer.appendChild(span);
                 }
 
-                // Следующие адреса
                 for (let i = 0; i < 3; i++) {
                     const stepsForward = (i + 1) * this.currentStep;
                     const nextAddress = this.getNextAddress(this.currentAddress, stepsForward);
@@ -1107,16 +1197,13 @@
             }
 
             updateUI() {
-                // Обновляем поля ввода
                 document.getElementById('address-display').textContent = this.currentAddress;
                 document.getElementById('address-input').value = this.currentAddress;
                 
-                // Обновляем результат (пины и текст)
                 this.updateResult();
                 this.updateSurroundingAddresses();
             }
 
-            // Работа с оборудованием
             toggleEquipmentList() {
                 return throttleClick(() => {
                     const panel = document.getElementById('equipment-panel');
@@ -1215,7 +1302,6 @@
                     document.getElementById('dialog-channels').value = '';
                     document.getElementById('equipment-dialog').style.display = 'flex';
                     
-                    // Фокус на первое поле
                     setTimeout(() => {
                         document.getElementById('dialog-name').focus();
                     }, 100);
@@ -1231,7 +1317,6 @@
                 document.getElementById('dialog-channels').value = item.channels;
                 document.getElementById('equipment-dialog').style.display = 'flex';
                 
-                // Фокус на первое поле
                 setTimeout(() => {
                     document.getElementById('dialog-name').focus();
                 }, 100);
@@ -1252,7 +1337,6 @@
                 }
                 
                 if (this.editingEquipment) {
-                    // Обновление существующего оборудования
                     this.editingEquipment.name = name;
                     this.editingEquipment.power = power;
                     this.editingEquipment.channels = channels;
@@ -1260,7 +1344,6 @@
                         this.editingEquipment.isCustom = true;
                     }
                 } else {
-                    // Добавление нового оборудования
                     const newItem = new EquipmentItem(name, power, channels, false, true);
                     this.allEquipment.push(newItem);
                 }
@@ -1270,7 +1353,6 @@
                 this.updatePinnedList();
                 this.closeEquipmentDialog();
                 
-                // Переоткрытие списка для обновления
                 this.toggleEquipmentList();
                 this.toggleEquipmentList();
             }
@@ -1317,19 +1399,15 @@
                 this.updatePinnedList();
             }
 
-            // Работа с локальным хранилищем
             saveToStorage() {
                 try {
-                    // Сохранение пользовательского оборудования
                     const customItems = this.allEquipment.filter(item => item.isCustom);
                     const customData = customItems.map(item => item.toStorageString());
                     localStorage.setItem('dmx_custom_equipment', JSON.stringify(customData));
                     
-                    // Сохранение закрепленного оборудования
                     const pinnedData = this.pinnedEquipment.map(item => item.toStorageString());
                     localStorage.setItem('dmx_pinned_equipment', JSON.stringify(pinnedData));
                     
-                    // Сохранение настроек
                     const settings = {
                         step: this.currentStep,
                         address: this.currentAddress,
@@ -1343,7 +1421,6 @@
 
             loadFromStorage() {
                 try {
-                    // Загрузка пользовательского оборудования
                     const customData = JSON.parse(localStorage.getItem('dmx_custom_equipment') || '[]');
                     customData.forEach(storageString => {
                         const item = EquipmentItem.fromStorageString(storageString);
@@ -1352,12 +1429,10 @@
                         }
                     });
                     
-                    // Загрузка закрепленного оборудования
                     const pinnedData = JSON.parse(localStorage.getItem('dmx_pinned_equipment') || '[]');
                     pinnedData.forEach(storageString => {
                         const savedItem = EquipmentItem.fromStorageString(storageString);
                         if (savedItem) {
-                            // Поиск соответствующего элемента в основном списке
                             const existingItem = this.allEquipment.find(item => 
                                 item.name === savedItem.name &&
                                 item.power === savedItem.power &&
@@ -1368,7 +1443,6 @@
                                 existingItem.pinned = true;
                                 this.pinnedEquipment.push(existingItem);
                             } else if (savedItem.isCustom) {
-                                // Если пользовательский прибор не найден, добавляем его
                                 savedItem.pinned = true;
                                 this.allEquipment.push(savedItem);
                                 this.pinnedEquipment.push(savedItem);
@@ -1376,7 +1450,6 @@
                         }
                     });
                     
-                    // Загрузка настроек
                     const settings = JSON.parse(localStorage.getItem('dmx_settings') || '{}');
                     if (settings.step) {
                         this.currentStep = settings.step;
@@ -1395,10 +1468,7 @@
             }
         }
 
-        // ============================================
-        // ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ HTML
-        // ============================================
-
+        // ГЛОБАЛЬНЫЕ ФУНКЦИИ
         function increaseAddress() {
             if (dmxApp) {
                 dmxApp.increaseAddress();
@@ -1447,20 +1517,37 @@
             if (dmxApp) dmxApp.filterEquipment(value);
         }
 
+        function showInstructions() {
+            document.getElementById('instructions').style.display = 'block';
+        }
+
         function hideInstructions() {
             document.getElementById('instructions').style.display = 'none';
         }
 
-        // ============================================
         // ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
-        // ============================================
-
         document.addEventListener('DOMContentLoaded', () => {
             // Показать инструкцию при первом открытии
             if (!localStorage.getItem('dmx_first_visit')) {
-                document.getElementById('instructions').style.display = 'block';
+                showInstructions();
                 localStorage.setItem('dmx_first_visit', 'true');
             }
+            
+            // Добавить кнопку инструкций в интерфейс
+            const header = document.querySelector('.equipment-header');
+            const instructionsBtn = document.createElement('button');
+            instructionsBtn.textContent = '📱';
+            instructionsBtn.style.cssText = `
+                background: none;
+                border: none;
+                color: #4CAF50;
+                font-size: 20px;
+                padding: 0 15px;
+                cursor: pointer;
+                margin-left: 10px;
+            `;
+            instructionsBtn.onclick = () => throttleClick(showInstructions);
+            header.appendChild(instructionsBtn);
             
             // Инициализация калькулятора
             dmxApp = new DmxCalculator();
